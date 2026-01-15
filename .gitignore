@@ -1,0 +1,4 @@
+checkpoint/*
+*.csv
+*.xlsx
+*.pyc
