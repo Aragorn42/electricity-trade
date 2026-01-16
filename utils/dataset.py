@@ -5,9 +5,9 @@ from torch.utils.data import Dataset
 from chinese_calendar import is_holiday
 
 class PriceDataset(Dataset):
-    def __init__(self, data, dates, input_len, pred_len, stride=24, mode='test'):
-        self.input_len = input_len
-        self.pred_len = pred_len
+    def __init__(self, args, data, dates, stride=24, mode='test'):
+        self.seq_len = args.seq_len
+        self.pred_len = args.pred_len
         self.stride = stride
         
         pd_dates = pd.to_datetime(dates) 
@@ -15,27 +15,30 @@ class PriceDataset(Dataset):
         # is_holiday() 对周末和法定节假日返回 True，对调休上班日返回 False
         holiday_mask = [1.0 if is_holiday(d) else 0.0 for d in pd_dates]
 
-        # df_check = pd.DataFrame({
-        #     "Date": pd_dates,
-        #     "Is_Holiday": holiday_mask
-        # })
-        # df_check.to_csv("holiday_check.csv", index=False)
-
         self.holiday_data = np.array(holiday_mask, dtype=np.float32)
-        
         total_len = len(data)
-        test_day = 209
-        
-        start_idx = total_len - 209 * 24 - input_len - pred_len + 24
-        
-        # 数据切片
-        self.data_reset = data[start_idx:]
-        # 日期特征切片 (也进行相同的切片)
-        self.holiday_reset = self.holiday_data[start_idx:]
+        if mode == 'train':
+            # 训练集：取前 train_day 天的数据
+            end_idx = args.train_day * 24
+            self.data_reset = data[:end_idx]
+            self.holiday_reset = self.holiday_data[:end_idx]
+            
+        elif mode == 'val':
+            # 验证集：介于 train 和 test 之间的数据
+            start_idx = args.train_day * 24
+            end_idx = total_len - args.eval_day * 24 - self.seq_len - self.pred_len + 24
+            self.data_reset = data[start_idx:end_idx]
+            self.holiday_reset = self.holiday_data[start_idx:end_idx]
+            
+        else:
+            # 测试集：取最后 eval_day 天的数据
+            start_idx = total_len - args.eval_day * 24 - self.seq_len - self.pred_len + 24
+            self.data_reset = data[start_idx:]
+            self.holiday_reset = self.holiday_data[start_idx:]
         
     def __len__(self):
         data_len = len(self.data_reset)
-        total_window_size = self.input_len + self.pred_len
+        total_window_size = self.seq_len + self.pred_len
         if data_len < total_window_size:
             return 0
         num_samples = (data_len - total_window_size) // self.stride + 1
@@ -43,7 +46,7 @@ class PriceDataset(Dataset):
     
     def __getitem__(self, idx):
         actual_start_index = idx * self.stride
-        x_end = actual_start_index + self.input_len
+        x_end = actual_start_index + self.seq_len
         y_end = x_end + self.pred_len
         
         # 获取价格数据
@@ -55,7 +58,7 @@ class PriceDataset(Dataset):
         holiday_y = self.holiday_reset[x_end : y_end]
         
         # 返回全是 Tensor，可以直接输入模型
-        # holiday_x 的形状是 (input_len, )，如果需要拼接进模型，可能需要 unsqueeze
+        # holiday_x 的形状是 (seq_len, )，如果需要拼接进模型，可能需要 unsqueeze
         return (torch.tensor(data_x, dtype=torch.float32),
                 torch.tensor(data_y, dtype=torch.float32),
                 torch.tensor(holiday_x, dtype=torch.float32), 
