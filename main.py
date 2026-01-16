@@ -3,6 +3,7 @@ from exp.eval import evaluate
 import argparse
 
 parser = argparse.ArgumentParser()
+# TimesFM-2.5, TimesFM-2.5time, HolidayAvg, NaiveAvg, fixed, DLinear, PatchTST
 parser.add_argument('--model_type', type=str, default='PatchTST')
 parser.add_argument('--model_path', type=str, default="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M")
 parser.add_argument('--file_path', type=str, default='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm', help='Path to the Excel file')

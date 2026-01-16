@@ -11,9 +11,9 @@ from sklearn.preprocessing import StandardScaler
 from os import path as file
 
 def get_model(args):
-    if args.model_type == "200MTime":
+    if args.model_type == "TimesFM-2.5time":
         model = timesfm2_5time.Model(model_path=args.model_path)
-    elif args.model_type == "200M":
+    elif args.model_type == "TimesFM-2.5":
         model = timesfm2_5.Model(model_path=args.model_path)
     elif args.model_type == "NaiveAvg":
         model = naive_avg.Model()
@@ -147,4 +147,3 @@ def evaluate(args):
                 worksheet.set_column(col_idx, col_idx, 15, format_int)
             else:
                 worksheet.set_column(col_idx, col_idx, 15, format_float_3)
-        df_report.to_excel("output_report.xlsx", index=False, header=False)
