@@ -5,39 +5,27 @@ from xlsm to 3 csv
 import pandas as pd
 import numpy as np
 
-def init_report_df(da_file, rt_file, diff_file):
-    # 1. 读取三个文件
-    df1 = da_file.iloc[-(209*24):, :]
-    df2 = rt_file.iloc[-(209*24):, :]
-    df3 = diff_file.iloc[-(209*24):, :]
+def init_report_df(args, da_file, rt_file, diff_file):
+    df1 = da_file.iloc[-(args.eval_day*24):, :]
+    df2 = rt_file.iloc[-(args.eval_day*24):, :]
+    df3 = diff_file.iloc[-(args.eval_day*24):, :]
     
-    # 2. 统一重命名列名，防止 merge 时产生后缀
-    # 假设文件里都是 'Date' 和 'Price'
     df1 = df1.rename(columns={'Price': 'DA_Price'})
     df2 = df2.rename(columns={'Price': 'RT_Price'})
     df3 = df3.rename(columns={'Price': 'Diff_Price'})
     
-    # 3. 合并数据 (以 Date 为基准)
-    # 使用 outer join 确保不丢数据
     merged_df = pd.merge(df1, df2, on='Datetime', how='outer')
     merged_df = pd.merge(merged_df, df3, on='Datetime', how='outer')
     
-    # 4. 【核心修复】强制指定列的顺序
-    # 这一步非常重要！确保数据的列顺序严格为 [Date, DA, RT, Diff]
-    # 否则 Date 列可能会跑到最后面，导致和 Header 对不上
     target_cols = ['Datetime', 'DA_Price', 'RT_Price', 'Diff_Price']
     merged_df = merged_df[target_cols]
     
-    # 按时间排序并重置索引，确保数据整洁
     merged_df = merged_df.sort_values('Datetime').reset_index(drop=True)
-    
-    # 5. 构造头部 (Row 0: 空, Row 1: 列名)
+
     header_data = [
-        ['时间戳', '日前电价', '实时电价', '日前实时差价'] # 第1行：显示的列名
+        ['时间戳', '日前电价', '实时电价', '日前实时差价']
     ]
     
-    # 创建头部 DataFrame，注意 columns 必须和 merged_df 完全一致
-    # 这样 pd.concat 才会垂直堆叠，而不是水平错开
     header_df = pd.DataFrame(header_data, columns=target_cols)
     
     # 6. 垂直拼接

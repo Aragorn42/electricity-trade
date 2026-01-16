@@ -90,7 +90,7 @@ def evaluate(args):
     if file.exists("output_report.xlsx"):
         df_report = pd.read_excel("output_report.xlsx", header=None)
     else:
-        df_report = init_report_df(da_raw, rt_raw, diff_raw)
+        df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
 
     da_preds = forecast(da_raw, args)
     rt_preds = forecast(rt_raw, args)
@@ -102,11 +102,16 @@ def evaluate(args):
     if args.two_variate:
         df_report = add_prediction_columns(df_report, da_preds - rt_preds, diff_true, args, is_two_variate=True)
 
-    # pandas >= 2.1
-    # the actual column names is not same as the column in excel
+    # # pandas >= 2.1
+    # # the actual column names is not same as the column in excel
+
+    df_report = df_report.map(
+        lambda x: x if not isinstance(x, (float, int)) else "{:.3f}".format(x)
+    )
     for col in df_report.columns:
-        if "Acc" not in str(col):
-            df_report[col] = df_report[col].map(
-                lambda x: x if not isinstance(x, (float, int)) else "{:.3f}".format(x)
+        if "准确率" in str(df_report[col].iloc[0]):
+            df_report[col].iloc[1:] = df_report[col].iloc[1:].map(\
+                lambda x: "{:.0f}".format(float(x))
             )
+    
     df_report.to_excel("output_report.xlsx", index=False, header=False)
