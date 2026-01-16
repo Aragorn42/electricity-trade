@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 from chinese_calendar import is_holiday
 
 class PriceDataset(Dataset):
-    def __init__(self, data, dates, input_len, pred_len, stride=24, mode='test'):
+    def __init__(self, args, data, dates, input_len, pred_len, stride=24, mode='test'):
         self.input_len = input_len
         self.pred_len = pred_len
         self.stride = stride
@@ -24,9 +24,9 @@ class PriceDataset(Dataset):
         self.holiday_data = np.array(holiday_mask, dtype=np.float32)
         
         total_len = len(data)
-        test_day = 209
+        test_day = args.eval_day
         
-        start_idx = total_len - 209 * 24 - input_len - pred_len + 24
+        start_idx = total_len - test_day * 96 - input_len - pred_len + 96
         
         # 数据切片
         self.data_reset = data[start_idx:]
