@@ -2,18 +2,11 @@ import timesfm
 import math
 import numpy as np
 import torch
-
+from chronos import Chronos2Pipeline
 class Model:
-    def __init__(self, model_path):
-        self.model = timesfm.TimesFM_2p5_200M_torch.from_pretrained(
-            model_path, 
-            local_files_only=True
-        )
-        self.model.compile(timesfm.ForecastConfig(
-            max_context=128,
-            max_horizon=128, 
-            normalize_inputs=True,
-        ))
+    def __init__(self, args):
+        self.model = Chronos2Pipeline.from_pretrained("/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2/", device_map="cuda")
+        self.quant = args.quant
         self.period = 24
 
     def forecast(self, pred_len, inputs):
@@ -33,11 +26,17 @@ class Model:
         # [Batch, Days, 24]
         x_reshaped = inputs.contiguous().view(B, num_days, self.period)
         # -> [Batch, 24, Days] -> [Batch * 24, Days]
-        inputs_daily = x_reshaped.permute(0, 2, 1).reshape(B * self.period, num_days)
+        inputs_daily = x_reshaped.permute(0, 2, 1).reshape(B * self.period, 1, num_days)
+
         pred_steps = math.ceil(pred_len / self.period)
         # 如果原本预测120点, 这里变成5点
-        outputs, _ = self.model.forecast(horizon = pred_steps, inputs = inputs_daily)
-        
+        pred_df = self.model.predict(
+            inputs_daily,
+            prediction_length=pred_steps
+        )
+        full_forecast = torch.cat(pred_df, dim=0)
+        outputs = full_forecast[:, self.quant, :]
+
         # TimesFM 返回的是 numpy array, 转回 Tensor
         if isinstance(outputs, np.ndarray):
             outputs = torch.from_numpy(outputs)

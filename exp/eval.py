@@ -1,4 +1,4 @@
-from model import timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST
+from model import timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, chronos2, chronos2time
 from utils.data_process import handle_excel, init_report_df, add_prediction_columns
 import torch
 from utils.dataset import PriceDataset
@@ -32,6 +32,10 @@ def get_model(args):
         model = DLinear.Model(args)
     elif args.model_type == "PatchTST":
         model = PatchTST.Model(args)
+    elif args.model_type == "Chronos-2":
+        model = chronos2.Model(args)
+    elif args.model_type == "Chronos-2time":
+        model = chronos2time.Model(args)
     return model
 
 def scaled_data(df):
@@ -88,7 +92,7 @@ def forecast(model, df, args):
                 y_pred = model(inputs_for_model.to(torch.device('cuda')).unsqueeze(2))
             else:
                 y_pred = model.forecast(args.pred_len, inputs_for_model)
-
+            
             y_pred = y_pred[0] if isinstance(y_pred, tuple) else y_pred
             
             # 如果进行了填充，需要把填充的多余部分切掉
@@ -133,17 +137,17 @@ def evaluate(args):
     if args.two_variate:
         df_report = add_prediction_columns(df_report, da_preds - rt_preds, diff_true, args, is_two_variate=True)
 
-    output_file = "output_report.xlsx"
-    # 使用 xlsxwriter 引擎
-    with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
-        df_report.to_excel(writer, index=False, header=False, sheet_name='Sheet1')
-        workbook  = writer.book
-        worksheet = writer.sheets['Sheet1']
-        format_float_3 = workbook.add_format({'num_format': '0.000'})
-        format_int = workbook.add_format({'num_format': '0'})
-        for col_idx, col_name in enumerate(df_report.columns):
-            first_cell_val = str(df_report.iloc[0, col_idx])
-            if "准确率" in first_cell_val:
-                worksheet.set_column(col_idx, col_idx, 15, format_int)
-            else:
-                worksheet.set_column(col_idx, col_idx, 15, format_float_3)
+    # output_file = "output_report.xlsx"
+    # # 使用 xlsxwriter 引擎
+    # with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
+    #     df_report.to_excel(writer, index=False, header=False, sheet_name='Sheet1')
+    #     workbook  = writer.book
+    #     worksheet = writer.sheets['Sheet1']
+    #     format_float_3 = workbook.add_format({'num_format': '0.000'})
+    #     format_int = workbook.add_format({'num_format': '0'})
+    #     for col_idx, col_name in enumerate(df_report.columns):
+    #         first_cell_val = str(df_report.iloc[0, col_idx])
+    #         if "准确率" in first_cell_val:
+    #             worksheet.set_column(col_idx, col_idx, 15, format_int)
+    #         else:
+    #             worksheet.set_column(col_idx, col_idx, 15, format_float_3)
