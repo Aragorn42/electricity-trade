@@ -16,7 +16,7 @@ class Model:
         ))
         self.period = 24
 
-    def forecast(self, pred_len, inputs):
+    def forecast(self, pred_len, inputs, args=None):
         """
         inputs: [Batch, seq_Len] (Tensor)
         outputs: [Batch, pred_len] (Tensor)
@@ -36,11 +36,11 @@ class Model:
         inputs_daily = x_reshaped.permute(0, 2, 1).reshape(B * self.period, num_days)
         pred_steps = math.ceil(pred_len / self.period)
         # 如果原本预测120点, 这里变成5点
-        outputs, _ = self.model.forecast(horizon = pred_steps, inputs = inputs_daily)
-        
+        outputs, quant= self.model.forecast(horizon = pred_steps, inputs = inputs_daily)
+        outputs = quant[:, :, args.quant]
         # TimesFM 返回的是 numpy array, 转回 Tensor
         if isinstance(outputs, np.ndarray):
-            outputs = torch.from_numpy(outputs)
+            outputs  = torch.from_numpy(outputs)
         outputs = outputs.to(inputs.device)
         
         # [Batch*24, Steps] -> [Batch, 24, Steps]

@@ -5,7 +5,7 @@ class Model:
         self.lookback_days = lookback_days
         self.period = 24  # 每日24小时
 
-    def forecast(self, horizon, history_x, holiday_x, holiday_y):
+    def forecast(self, args, history_x, holiday_x, holiday_y):
         """
         params:
             horizon: 预测步长 (int)
