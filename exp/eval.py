@@ -51,7 +51,7 @@ def scaled_data(df):
     df_scaled.iloc[:, 1] = scaler.fit_transform(prices).flatten()
     return df_scaled, scaler
     
-def forecast(model, df, args):
+def forecast(model, df, args, quants=None):
     '''
     file: pd.DataFrame with 'Datetime' and 'Price' columns
     '''
@@ -96,7 +96,7 @@ def forecast(model, df, args):
                 y_pred = model(inputs_for_model.to(torch.device('cuda')).unsqueeze(2))
                 y_pred = y_pred.detach().cpu().numpy()
             else:
-                y_pred = model.forecast(args.pred_len, inputs_for_model, args)
+                y_pred = model.forecast(args.pred_len, inputs_for_model, args, quants)
             #print(quant.shape)
             #y_pred = y_pred[0] if isinstance(y_pred, tuple) else y_pred
             # 如果进行了填充，需要把填充的多余部分切掉
@@ -156,3 +156,105 @@ def evaluate(args):
                     worksheet.set_column(col_idx, col_idx, 15, format_int)
                 else:
                     worksheet.set_column(col_idx, col_idx, 15, format_float_3)
+
+from tqdm import tqdm  # 建议安装 tqdm 用于显示进度条: pip install tqdm
+
+def calc_sign_accuracy(preds, true_values):
+    """
+    计算符号准确率 (方向预测准确率)
+    preds: numpy array, 预测值
+    true_values: numpy array, 真实值
+    """
+    # 展平以确保维度一致
+    p = preds.flatten()
+    t = true_values.flatten()
+    
+    # 截取较短的长度进行比较（防止长度不一致报错）
+    min_len = min(len(p), len(t))
+    p = p[-min_len:]
+    t = t[-min_len:]
+    
+    # 计算符号: 1为正, -1为负, 0为0
+    # 注意：在电力差价中，0的处理可能需要根据业务逻辑，这里简单认为是相等的符号
+    sign_p = np.sign(p)
+    sign_t = np.sign(t)
+    
+    # 统计符号相同的数量
+    correct_count = np.sum(sign_p == sign_t)
+    accuracy = correct_count / min_len
+    return accuracy
+
+def find_best_quants(model, inputs, scaler, true_values, args):
+    """
+    贪心算法寻找最优 Quant 组合
+    """
+    print("开始寻找最优分位数组合 (Greedy Search)...")
+    
+    # 初始化: 所有小时默认使用 quant = 12 (中位数附近)
+    # 范围 0-20, 其中 12 是初始值
+    best_quants = [12] * 24 
+    
+    baseline_preds_tensor = forecast(model, inputs, args, quants=best_quants)
+    baseline_preds = scaler.inverse_transform(baseline_preds_tensor.reshape(-1, 1)).flatten()
+    current_best_acc = calc_sign_accuracy(baseline_preds, true_values)
+    print(f"初始基准准确率 (All 12): {current_best_acc:.4f}")
+
+    # 遍历 24 个小时
+    for h in range(24):
+        best_q_for_h = best_quants[h] # 默认为当前的最优值
+        improved = False
+        
+        # 遍历该小时可能的 quant (0-20)
+        # 使用 tqdm 显示进度，因为模型预测可能较慢
+        for q in tqdm(range(5, 15), desc=f"Optimizing Hour {h}", leave=False):
+            if q == best_quants[h]:
+                continue # 跳过当前已经计算过的基准值
+            
+            # 构造临时的 quants 数组
+            temp_quants = copy.deepcopy(best_quants)
+            temp_quants[h] = q 
+            
+            # 预测
+            preds_tensor = forecast(model, inputs, args, quants=temp_quants)
+            
+            # 反归一化
+            preds = scaler.inverse_transform(preds_tensor.reshape(-1, 1)).flatten()
+            
+            # 计算准确率
+            acc = calc_sign_accuracy(preds, true_values)
+            
+            # 贪心策略: 如果发现更好的准确率，立即更新
+            # 或者是 >= 以便在准确率相同时优先选择某种偏好(这里严格 >)
+            if acc > current_best_acc:
+                current_best_acc = acc
+                best_q_for_h = q
+                improved = True
+        
+        # 锁定该小时的最优 quant
+        best_quants[h] = best_q_for_h
+        
+        if improved:
+            print(f"Hour {h}: 发现更优 Quant {best_q_for_h}, 当前准确率提升至: {current_best_acc:.4f}")
+        else:
+            print(f"Hour {h}: 保持默认 Quant {best_q_for_h}, 准确率: {current_best_acc:.4f}")
+
+    print(f"搜索结束. 最终最优准确率: {current_best_acc:.4f}")
+    print(f"最优 Quants 组合: {best_quants}")
+    return best_quants
+
+def evaluate_(args):
+    _, _, diff_raw = handle_excel(args.file_path)
+    diff, diff_scaler = scaled_data(diff_raw) 
+    true_values = diff_raw.iloc[1:, 1].values 
+    model = get_model(args)
+    optimal_quants = find_best_quants(model, diff, diff_scaler, true_values, args)
+    
+
+    final_preds_tensor = forecast(model, diff, args, quants=optimal_quants)
+    diff_preds = diff_scaler.inverse_transform(final_preds_tensor.cpu().numpy().reshape(-1, 1)).flatten()
+    
+    # 再次验证准确率
+    final_acc = calc_sign_accuracy(diff_preds, true_values)
+    print(f"最终验证符号准确率: {final_acc:.4f}")
+    
+    return diff_preds, optimal_quants
