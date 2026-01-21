@@ -2,7 +2,7 @@ class Model:
     def __init__(self, value):
         # [24, 1] tensor
         self.value = value
-    def forecast(self, horizon, inputs):
+    def forecast(self, horizon, inputs, args):
         """
         inputs: [Batch, Seq_Len]
         return: [Batch, horizon]

@@ -5,7 +5,7 @@ class Model:
         self.lookback_days = lookback_days
         self.period = 24
         
-    def forecast(self, horizon, inputs):
+    def forecast(self, horizon, inputs, args):
         """
         inputs: [Batch, Seq_Len]
         return: [Batch, horizon]

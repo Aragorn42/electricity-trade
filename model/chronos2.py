@@ -5,7 +5,7 @@ class Model():
     def __init__(self, args):
         self.model = Chronos2Pipeline.from_pretrained("/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2/", device_map="cuda")
         self.quant = args.quant
-    def forecast(self, pred_len, inputs):
+    def forecast(self, pred_len, inputs, args):
         # tensor
         input3d = inputs.unsqueeze(1)
         pred_df = self.model.predict(

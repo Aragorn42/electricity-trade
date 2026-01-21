@@ -75,7 +75,10 @@ def add_prediction_columns(df, pred_array, true_values, args, is_two_variate = F
     df.iloc[-n_preds:, col_acc_idx] = results
     
     acc = np.mean(results) * 100
-    print(f"{args.model_type}{args.seq_len}to120_分位数{args.quant}_{'双预测'if is_two_variate else '单预测'} 准确率: {acc:.2f}%")
+    if args.quant > 0:
+        print(f"{args.model_type}{args.seq_len}to120_分位数{args.quant}_{'双预测'if is_two_variate else '单预测'} 准确率: {acc:.2f}%")
+    else:
+        print(f"{args.model_type}{args.seq_len}to120_{'双预测'if is_two_variate else '单预测'} 准确率: {acc:.2f}%")
     df.iloc[0, col_acc_idx] = f"准确率={acc:.2f}%"
     
     return df

@@ -21,4 +21,5 @@ class Model():
         inputs: [Batch, seq_Len] (Tensor)
         outputs: [Batch, pred_len] (Tensor)
         """
-        return self.model.forecast(pred_len, inputs)[1]
+        _, y_pred_quant = self.model.forecast(pred_len, inputs)
+        return y_pred_quant[:, :, args.quant]

@@ -1,4 +1,4 @@
-from model import timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, chronos2, chronos2time, chronos2holiday
+from model import timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, chronos2, chronos2time, chronos2holiday, YingLong
 from utils.data_process import handle_excel, init_report_df, add_prediction_columns
 import torch
 from utils.dataset import PriceDataset
@@ -38,6 +38,8 @@ def get_model(args):
         model = chronos2time.Model(args)
     elif args.model_type == "Chronos-2holiday":
         model = chronos2holiday.Model(args)
+    elif args.model_type == "YingLong":
+        model = YingLong.Model(args)
     return model
 
 def scaled_data(df):
@@ -92,11 +94,11 @@ def forecast(model, df, args):
                 )
             elif args.model_type == "DLinear" or args.model_type == "PatchTST":
                 y_pred = model(inputs_for_model.to(torch.device('cuda')).unsqueeze(2))
+                y_pred = y_pred.detach().cpu().numpy()
             else:
                 y_pred = model.forecast(args.pred_len, inputs_for_model, args)
             #print(quant.shape)
             #y_pred = y_pred[0] if isinstance(y_pred, tuple) else y_pred
-            y_pred = y_pred[:, :, args.quant]
             # 如果进行了填充，需要把填充的多余部分切掉
             if current_batch_size < args.batchsize:
                 y_pred = y_pred[:current_batch_size]

@@ -3,3 +3,9 @@
 
 ## 预测
 从原始.xlsm读入, 调用预训练checkpoint, 输出给定格式excel
+
+### 运行YingLong
+1. 
+```bash
+pip install xformers transformers
+

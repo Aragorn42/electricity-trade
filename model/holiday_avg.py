@@ -8,10 +8,10 @@ class Model:
     def forecast(self, args, history_x, holiday_x, holiday_y):
         """
         params:
-            horizon: 预测步长 (int)
+            args.pred_len: 预测步长 (int)
             history_x: [Batch, Seq_Len] (数值)
             holiday_x: [Batch, Seq_Len] (0=工作日, 1=假期)
-            holiday_y: [Batch, Horizon] (未来的假期情况)
+            holiday_y: [Batch, args.pred_len] (未来的假期情况)
         """
         B, seq_len = history_x.shape
         
@@ -68,17 +68,17 @@ class Model:
         )
         
         # 4. 根据未来的 holiday_y 组装预测结果
-        # holiday_y: [Batch, Horizon]
+        # holiday_y: [Batch, args.pred_len]
 
-        repeats = (horizon + self.period - 1) // self.period
+        repeats = (args.pred_len + self.period - 1) // self.period
         
         # [Batch, 24 * repeats]
         full_work_pred = work_profile.repeat(1, repeats)
         full_holi_pred = holi_profile.repeat(1, repeats)
         
-        # 截取到 horizon 长度 [Batch, Horizon]
-        full_work_pred = full_work_pred[:, :horizon]
-        full_holi_pred = full_holi_pred[:, :horizon]
+        # 截取到 args.pred_len 长度 [Batch, args.pred_len]
+        full_work_pred = full_work_pred[:, :args.pred_len]
+        full_holi_pred = full_holi_pred[:, :args.pred_len]
         
         # 5. 最终选择
         # holiday_y 为 1 处取 holi_pred，为 0 处取 work_pred

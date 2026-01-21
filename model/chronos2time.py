@@ -9,7 +9,7 @@ class Model:
         self.quant = args.quant
         self.period = 24
 
-    def forecast(self, pred_len, inputs):
+    def forecast(self, pred_len, inputs, args):
         """
         inputs: [Batch, seq_Len] (Tensor)
         outputs: [Batch, pred_len] (Tensor)
