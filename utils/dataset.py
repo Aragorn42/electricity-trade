@@ -13,8 +13,10 @@ class PriceDataset(Dataset):
         pd_dates = pd.to_datetime(dates) 
 
         # is_holiday() 对周末和法定节假日返回 True，对调休上班日返回 False
-        holiday_mask = [1 if is_holiday(d) else -1 for d in pd_dates]
+        # holiday_mask = [1 if is_holiday(d) else -1 for d in pd_dates]
 
+        # 用1-7表示星期, 1 for monday, 2 for tuesday, ..., 7 for sunday
+        holiday_mask = [d.weekday() + 1 for d in pd_dates]
         self.holiday_data = np.array(holiday_mask, dtype=np.float32)
         total_len = len(data)
         if mode == 'train':

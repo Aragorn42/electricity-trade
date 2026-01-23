@@ -21,8 +21,8 @@ echo $current_time
 #         --eval_day=209
 #     done
 # done
-for j in 720;do
-    for i in 12;do
+for j in 1440;do
+    for i in {10..12};do
         python -u main.py \
         --model_type "Chronos-2holiday" \
         --seq_len $j \

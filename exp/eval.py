@@ -58,18 +58,28 @@ def scaled_data(df):
     df_scaled.iloc[:, 1] = scaler.fit_transform(prices).flatten()
     return df_scaled, scaler
     
-def forecast(model, df, args):
+def forecast(model, da, rt, df, args):
     '''
     file: pd.DataFrame with 'Datetime' and 'Price' columns
     '''
-    da_values = df['Price'].values.astype(np.float32)
-    da_dates = df['Datetime'].values
-    dataset = PriceDataset(args, da_values, da_dates, stride=24, mode='test')
+    diff_values = df['Price'].values.astype(np.float32)
+    diff_dates = df['Datetime'].values
+    dataset = PriceDataset(args, diff_values, diff_dates, stride=24, mode='test')
     dataloader = DataLoader(dataset, batch_size=args.batchsize, shuffle=False, num_workers=0)
+    
+    da_values = da['Price'].values.astype(np.float32)
+    da_dates = da['Datetime'].values
+    dataset_da = PriceDataset(args, da_values, da_dates, stride=24, mode='test')
+    dataloader_da = DataLoader(dataset_da, batch_size=args.batchsize, shuffle=False, num_workers=0)
+    
+    rt_values = rt['Price'].values.astype(np.float32)
+    rt_dates = rt['Datetime'].values
+    dataset_rt = PriceDataset(args, rt_values, rt_dates, stride=24, mode='test')
+    dataloader_rt = DataLoader(dataset_rt, batch_size=args.batchsize, shuffle=False, num_workers=0)
     
     y_preds = []
     with torch.no_grad():
-        for x, y_true, x_holiday, y_holiday in dataloader:            
+        for (x, y_true, x_holiday, y_holiday), (x_da, y_true_da, x_holiday_da, y_holiday_da), (x_rt, y_true_rt, x_holiday_rt, y_holiday_rt) in zip(dataloader, dataloader_da, dataloader_rt):
             current_batch_size = x.shape[0]
 
             # 如果是最后一个 Batch 且不足 BATCH_SIZE，填充 x
@@ -84,18 +94,29 @@ def forecast(model, df, args):
                 
                 padding_yh = torch.zeros(pad_len, y_holiday.shape[1], device=y_holiday.device, dtype=y_holiday.dtype)
                 y_holiday_padded = torch.cat([y_holiday, padding_yh], dim=0)
-                
+
+                padding_xda = torch.zeros(pad_len, x_da.shape[1], device=x_da.device, dtype=x_da.dtype)
+                x_da_padded = torch.cat([x_da, padding_xda], dim=0)
+
+                padding_xrt = torch.zeros(pad_len, x_rt.shape[1], device=x_rt.device, dtype=x_rt.dtype)
+                x_rt_padded = torch.cat([x_rt, padding_xrt], dim=0)
+
+                padding_xholiday = torch.zeros(pad_len, x_holiday.shape[1], device=x_holiday.device, dtype=x_holiday.dtype)
+                x_holiday_padded = torch.cat([x_holiday, padding_xholiday], dim=0)
             else:
                 x_padded = x
                 x_holiday_padded = x_holiday
                 y_holiday_padded = y_holiday
+                x_da_padded = x_da
+                x_rt_padded = x_rt
+            # inputs_for_model = x_padded
 
-            inputs_for_model = x_padded
-
-            if args.model_type == "HolidayAvg" or args.model_type == "Chronos-2holiday":
+            if args.model_type == "Chronos-2holiday":
                 y_pred = model.forecast(
                     args, 
-                    inputs_for_model,   # [batch, Seq]
+                    x_da_padded,   # [batch, Seq]
+                    x_rt_padded,   # [batch, Seq]
+                    x_padded,   # [batch, Seq]
                     holiday_x=x_holiday_padded,   # [batch, Seq]
                     holiday_y=y_holiday_padded    # [batch, Pred]
                 )
@@ -128,17 +149,9 @@ def evaluate(args):
     else:
         df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
     device = torch.device('cuda')
-    if args.need_train:
-        if args.two_variate:
-            da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
-            rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
-        diff_preds = forecast(train(args, get_model(args).to(device), diff), diff, args)
-    else:
-        model = get_model(args)
-        if args.two_variate:
-            da_preds = forecast(model, da, args)
-            rt_preds = forecast(model, rt, args)
-        diff_preds = forecast(model, diff, args)
+
+    model = get_model(args)
+    diff_preds = forecast(model, da, rt, diff, args)
     if args.two_variate:
         da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
         rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
