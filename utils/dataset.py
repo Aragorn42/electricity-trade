@@ -9,23 +9,24 @@ class PriceDataset(Dataset):
         self.seq_len = args.seq_len
         self.pred_len = args.pred_len
         self.stride = stride
-        
+        self.train_day_start = 730 - args.train_day - args.val_day - args.eval_day
         pd_dates = pd.to_datetime(dates) 
 
         # is_holiday() 对周末和法定节假日返回 True，对调休上班日返回 False
-        holiday_mask = [1.0 if is_holiday(d) else 0.0 for d in pd_dates]
+        holiday_mask = [1 if is_holiday(d) else -1 for d in pd_dates]
 
         self.holiday_data = np.array(holiday_mask, dtype=np.float32)
         total_len = len(data)
         if mode == 'train':
             # 训练集：取前 train_day 天的数据
-            end_idx = args.train_day * 24
-            self.data_reset = data[:end_idx]
-            self.holiday_reset = self.holiday_data[:end_idx]
+            start_idx = self.train_day_start * 24
+            end_idx = start_idx + args.train_day * 24
+            self.data_reset = data[start_idx:end_idx]
+            self.holiday_reset = self.holiday_data[start_idx:end_idx]
             
         elif mode == 'val':
             # 验证集：介于 train 和 test 之间的数据
-            start_idx = args.train_day * 24
+            start_idx = self.train_day_start * 24 + args.train_day * 24
             end_idx = total_len - args.eval_day * 24 - self.seq_len - self.pred_len + 24
             self.data_reset = data[start_idx:end_idx]
             self.holiday_reset = self.holiday_data[start_idx:end_idx]
@@ -33,8 +34,10 @@ class PriceDataset(Dataset):
         else:
             # 测试集：取最后 eval_day 天的数据
             start_idx = total_len - args.eval_day * 24 - self.seq_len - self.pred_len + 24
+            end_idx = data.shape[0]
             self.data_reset = data[start_idx:]
             self.holiday_reset = self.holiday_data[start_idx:]
+        print(f"{mode} day:{(end_idx-start_idx)/24}")
         
     def __len__(self):
         data_len = len(self.data_reset)

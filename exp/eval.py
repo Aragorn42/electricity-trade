@@ -9,6 +9,13 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from os import path as file
+import random
+
+seed = 42
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
 
 def get_model(args):
     if args.model_type == "TimesFM-2.5time":
@@ -122,16 +129,19 @@ def evaluate(args):
         df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
     device = torch.device('cuda')
     if args.need_train:
-        da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
-        rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
+        if args.two_variate:
+            da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
+            rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
         diff_preds = forecast(train(args, get_model(args).to(device), diff), diff, args)
     else:
         model = get_model(args)
-        da_preds = forecast(model, da, args)
-        rt_preds = forecast(model, rt, args)
+        if args.two_variate:
+            da_preds = forecast(model, da, args)
+            rt_preds = forecast(model, rt, args)
         diff_preds = forecast(model, diff, args)
-    da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
-    rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
+    if args.two_variate:
+        da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
+        rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
     diff_preds = diff_scaler.inverse_transform(diff_preds.reshape(-1, 1)).flatten()
 
     diff_true = diff_raw.iloc[1:, 1].values
