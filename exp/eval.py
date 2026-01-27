@@ -1,4 +1,4 @@
-from model import timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, chronos2, chronos2time, chronos2holiday, YingLong
+from model import timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, TimeMoE#, chronos2, chronos2time, chronos2holiday, YingLong, chronos2time2
 from utils.data_process import handle_excel, init_report_df, add_prediction_columns
 import torch
 from utils.dataset import PriceDataset
@@ -18,9 +18,9 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 
 def get_model(args):
-    if args.model_type == "TimesFM-2.5time":
+    if "TimesFM-2.5time" in args.model_type:
         model = timesfm2_5time.Model(model_path=args.model_path)
-    elif args.model_type == "TimesFM-2.5":
+    elif "TimesFM-2.5" in args.model_type:
         model = timesfm2_5.Model(model_path=args.model_path)
     elif args.model_type == "NaiveAvg":
         model = naive_avg.Model()
@@ -39,14 +39,29 @@ def get_model(args):
         model = DLinear.Model(args)
     elif args.model_type == "PatchTST":
         model = PatchTST.Model(args)
-    elif args.model_type == "Chronos-2":
-        model = chronos2.Model(args)
-    elif args.model_type == "Chronos-2time":
-        model = chronos2time.Model(args)
-    elif args.model_type == "Chronos-2holiday":
+    elif "Chronos-2time2" in args.model_type:
+        from model import chronos2time2
+        model = chronos2time2.Model(args)
+    elif "Chronos-2holiday" in args.model_type:
+        from model import chronos2holiday
         model = chronos2holiday.Model(args)
+    elif "Chronos-2time" in args.model_type:
+        from model import chronos2time
+        model = chronos2time.Model(args)
+    elif "Chronos-2" in args.model_type:
+        from model import chronos2
+        model = chronos2.Model(args)
     elif args.model_type == "YingLong":
+        from model import YingLong
         model = YingLong.Model(args)
+    elif args.model_type == "TimeMoE":
+        model = TimeMoE.Model(args)
+    elif args.model_type == "Timer":
+        from model import Timer
+        model = Timer.Model()
+    elif args.model_type == "FalconTST":
+        from model import FalconTST
+        model = FalconTST.Model()
     return model
 
 def scaled_data(df):
@@ -129,19 +144,16 @@ def evaluate(args):
         df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
     device = torch.device('cuda')
     if args.need_train:
-        if args.two_variate:
-            da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
-            rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
+        da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
+        rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
         diff_preds = forecast(train(args, get_model(args).to(device), diff), diff, args)
     else:
         model = get_model(args)
-        if args.two_variate:
-            da_preds = forecast(model, da, args)
-            rt_preds = forecast(model, rt, args)
+        da_preds = forecast(model, da, args)
+        rt_preds = forecast(model, rt, args)
         diff_preds = forecast(model, diff, args)
-    if args.two_variate:
-        da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
-        rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
+    da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
+    rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
     diff_preds = diff_scaler.inverse_transform(diff_preds.reshape(-1, 1)).flatten()
 
     diff_true = diff_raw.iloc[1:, 1].values
