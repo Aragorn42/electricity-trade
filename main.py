@@ -4,10 +4,10 @@ import argparse
 
 parser = argparse.ArgumentParser()
 # TimesFM-2.5, TimesFM-2.5time, HolidayAvg, NaiveAvg, fixed, DLinear, PatchTST
-parser.add_argument('--model_type', type=str, default='YingLong')
+parser.add_argument('--model_type', type=str, default='Moirai2')
 parser.add_argument('--model_path', type=str, default="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M")
 parser.add_argument('--file_path', type=str, default='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm', help='Path to the Excel file')
-parser.add_argument('--seq_len', type=int, default=2304, help='Input sequence length')
+parser.add_argument('--seq_len', type=int, default=720, help='Input sequence length')
 parser.add_argument('--pred_len', type=int, default=120, help='Prediction length')
 parser.add_argument('--batchsize', type=int, default=64, help='Batch size for evaluation')
 parser.add_argument('--two_variate', action='store_true')

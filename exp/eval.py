@@ -1,4 +1,4 @@
-from model import timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, TimeMoE#, chronos2, chronos2time, chronos2holiday, YingLong, chronos2time2
+#from model import #timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, TimeMoE#, chronos2, chronos2time, chronos2holiday, YingLong, chronos2time2
 from utils.data_process import handle_excel, init_report_df, add_prediction_columns
 import torch
 from utils.dataset import PriceDataset
@@ -19,14 +19,19 @@ torch.cuda.manual_seed(seed)
 
 def get_model(args):
     if "TimesFM-2.5time" in args.model_type:
+        from model import timesfm2_5time
         model = timesfm2_5time.Model(model_path=args.model_path)
     elif "TimesFM-2.5" in args.model_type:
+        from model import timesfm2_5
         model = timesfm2_5.Model(model_path=args.model_path)
     elif args.model_type == "NaiveAvg":
+        from model import naive_avg
         model = naive_avg.Model()
     elif args.model_type == "HolidayAvg":
+        from model import holiday_avg
         model = holiday_avg.Model()
     elif args.model_type == "fixed":
+        from model import fixed
         value1 = torch.tensor([
             -42.352, -16.900, -5.879, 8.722, 19.356,16.879, -13.520, -4.291, -22.837, -6.047, 19.049, 6.494, 30.489, -9.075, 21.705, 11.469, 2.213, -1.240, -6.075, -15.271, -23.021, -26.439, -22.399, 4.697
         ])
@@ -36,8 +41,10 @@ def get_model(args):
         ])
         model = fixed.Model(value1)
     elif args.model_type == "DLinear":
+        from model import DLinear
         model = DLinear.Model(args)
     elif args.model_type == "PatchTST":
+        from model import PatchTST
         model = PatchTST.Model(args)
     elif "Chronos-2time2" in args.model_type:
         from model import chronos2time2
@@ -55,6 +62,7 @@ def get_model(args):
         from model import YingLong
         model = YingLong.Model(args)
     elif args.model_type == "TimeMoE":
+        from model import TimeMoE
         model = TimeMoE.Model(args)
     elif args.model_type == "Timer":
         from model import Timer
@@ -62,6 +70,9 @@ def get_model(args):
     elif args.model_type == "FalconTST":
         from model import FalconTST
         model = FalconTST.Model()
+    elif "moirai" in args.model_type.lower():
+        from model import Moirai
+        model = Moirai.Model(args.model_type)
     return model
 
 def scaled_data(df):

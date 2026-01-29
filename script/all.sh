@@ -149,17 +149,17 @@ echo $current_time
 #         --eval_day=209
 #     done
 # done
-for i in 480;do
-    for model in 'FalconTST';do
-        python main.py \
-        --model_type=$model \
-        --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-        --seq_len=$i \
-        --pred_len=120 \
-        --report \
-        --batchsize=64 \
-        --eval_day=209
-    done
-done
+# for i in 480;do
+#     for model in 'FalconTST';do
+#         python main.py \
+#         --model_type=$model \
+#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+#         --seq_len=$i \
+#         --pred_len=120 \
+#         --report \
+#         --batchsize=64 \
+#         --eval_day=209
+#     done
+# done
 current_time=$(date +'%H:%M:%S')
 echo $current_time
