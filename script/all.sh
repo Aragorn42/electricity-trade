@@ -23,7 +23,7 @@ echo $current_time
 #         --eval_day=209
 #     done
 # done
-for i in 720;do
+for i in 960 1440 1920;do
     for j in -1;do
         for model in 'moirai2time2';do
             /usr/bin/python3 -u main.py \
@@ -32,7 +32,6 @@ for i in 720;do
             --seq_len=$i \
             --pred_len=120 \
             --batchsize=64 \
-            --report \
             --quant=$j \
             --eval_day=209
         done
