@@ -13,7 +13,7 @@ class Model():
             use_continuous_quantile_head=True, # 概率预测
             force_flip_invariance=True, # 输入-X保证输出-Y
             infer_is_positive=False, # 强制输出非负
-            fix_quantile_crossing=False # 分位数保序
+            fix_quantile_crossing=True # 分位数保序
         ))
 
     def forecast(self, pred_len, inputs, args):

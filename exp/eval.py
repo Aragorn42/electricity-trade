@@ -70,9 +70,15 @@ def get_model(args):
     elif args.model_type == "FalconTST":
         from model import FalconTST
         model = FalconTST.Model()
+    elif args.model_type == "moirai2time2":
+        from model import Moirai2time2
+        model = Moirai2time2.Model()
     elif "moirai" in args.model_type.lower():
         from model import Moirai
         model = Moirai.Model(args.model_type)
+    elif "sundial" in args.model_type.lower():
+        from model import sundial
+        model = sundial.Model()
     return model
 
 def scaled_data(df):
@@ -160,11 +166,11 @@ def evaluate(args):
         diff_preds = forecast(train(args, get_model(args).to(device), diff), diff, args)
     else:
         model = get_model(args)
-        da_preds = forecast(model, da, args)
-        rt_preds = forecast(model, rt, args)
+        # da_preds = forecast(model, da, args)
+        # rt_preds = forecast(model, rt, args)
         diff_preds = forecast(model, diff, args)
-    da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
-    rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
+    # da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
+    # rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
     diff_preds = diff_scaler.inverse_transform(diff_preds.reshape(-1, 1)).flatten()
 
     diff_true = diff_raw.iloc[1:, 1].values
