@@ -8,17 +8,17 @@ current_time=$(date +'%H:%M:%S')
 # timesfm time input len 1080 quant6 65.29%
 # YingLong input len 24*32 quant 80(in 100) 64.96%
 echo $current_time
-for j in 720;do
-    for model in "moirai";do
-        /usr/bin/python3 -u main.py \
-        --model_type=$model \
-        --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-        --seq_len=$j \
-        --pred_len=120 \
-        --batchsize=64 \
-        --eval_day=209
-    done
-done
+# for j in 720;do
+#     for model in "moirai";do
+#         /usr/bin/python3 -u main.py \
+#         --model_type=$model \
+#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+#         --seq_len=$j \
+#         --pred_len=120 \
+#         --batchsize=64 \
+#         --eval_day=209
+#     done
+# done
 # for j in 720;do
 #     for model in 'fixed' 'NaiveAvg' 'HolidayAvg';do
 #         python -u main.py \
@@ -103,26 +103,25 @@ done
 #             --seq_len=$j \
 #             --pred_len=120 \
 #             --batchsize=64 \
-#             --two_variate=True \
 #             --eval_day=209 \
 #             --quant=$i
 #         done
 #     done
 # done
-# for j in 768;do
-#     for i in 80;do
-#         for model in 'YingLong';do
-#             python -u main.py \
-#             --model_type=$model \
-#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#             --seq_len=$j \
-#             --pred_len=120 \
-#             --batchsize=32 \
-#             --two_variate=True \
-#             --eval_day=209 \
-#             --quant=$i
-#         done
-#     done
-# done
+for j in 768;do
+    for i in 80;do
+        for model in 'YingLong';do
+            python -u main.py \
+            --model_type=$model \
+            --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+            --seq_len=$j \
+            --pred_len=120 \
+            --batchsize=32 \
+            --eval_day=209 \
+            --report \
+            --quant=$i
+        done
+    done
+done
 current_time=$(date +'%H:%M:%S')
 echo $current_time

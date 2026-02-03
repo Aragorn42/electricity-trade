@@ -1,3 +1,4 @@
+from model import YingLongtime2
 from utils.data_process import handle_excel, init_report_df, add_prediction_columns
 import torch
 from utils.dataset import PriceDataset
@@ -11,7 +12,8 @@ from os import path as file
 import copy
 def get_model(args):
     if args.model_type == "TimesFM-2.5time":
-        model = timesfm2_5time.Model(model_path=args.model_path)
+        from model import timesfm2_5time2
+        model = timesfm2_5time2.Model(model_path=args.model_path)
     elif args.model_type == "TimesFM-2.5":
         model = timesfm2_5.Model(model_path=args.model_path)
     elif args.model_type == "NaiveAvg":
@@ -38,7 +40,7 @@ def get_model(args):
     elif args.model_type == "Chronos-2holiday":
         model = chronos2holiday.Model(args)
     elif args.model_type == "YingLong":
-        model = YingLong.Model(args)
+        model = YingLongtime2.Model(args)
     elif args.model_type == "moirai":
         from model import moirai
         model = moirai.Model()
@@ -112,7 +114,7 @@ def forecast(model, df, args, quants=None):
         y_preds_ordered = y_preds.flatten()
         return y_preds_ordered
     
-def evaluate_(args):
+def evaluate(args):
     # df with datatime and Price
     da_raw, rt_raw, diff_raw = handle_excel(args.file_path)
     da, da_scaler = scaled_data(da_raw)
@@ -194,7 +196,7 @@ def find_best_quants(model, inputs, scaler, true_values, args):
     
     # 初始化: 所有小时默认使用 quant = 12 (中位数附近)
     # 范围 0-20, 其中 12 是初始值
-    best_quants = [14] * 24 
+    best_quants = [0, 80, 85, 85, 95, 80, 85, 90, 90, 95, 70, 80, 90, 75, 85, 80, 80, 70, 85, 75, 80, 75, 95, 75]
     
     baseline_preds_tensor = forecast(model, inputs, args, quants=best_quants)
     baseline_preds = scaler.inverse_transform(baseline_preds_tensor.reshape(-1, 1)).flatten()
@@ -208,7 +210,7 @@ def find_best_quants(model, inputs, scaler, true_values, args):
         
         # 遍历该小时可能的 quant (0-20)
         # 使用 tqdm 显示进度，因为模型预测可能较慢
-        for q in tqdm(range(1, 20), desc=f"Optimizing Hour {h}", leave=False):
+        for q in tqdm(range(0, 100, 2), desc=f"Optimizing Hour {h}", leave=False):
             if q == best_quants[h]:
                 continue # 跳过当前已经计算过的基准值
             
@@ -244,7 +246,7 @@ def find_best_quants(model, inputs, scaler, true_values, args):
     print(f"最优 Quants 组合: {best_quants}")
     return best_quants
 
-def evaluate(args):
+def evaluate_(args):
     _, _, diff_raw = handle_excel(args.file_path)
     diff, diff_scaler = scaled_data(diff_raw) 
     true_values = diff_raw.iloc[1:, 1].values 
