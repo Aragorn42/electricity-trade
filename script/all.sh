@@ -23,20 +23,20 @@ echo $current_time
 #         --eval_day=209
 #     done
 # done
-for i in 960 1440 1920;do
-    for j in -1;do
-        for model in 'moirai2time2';do
-            /usr/bin/python3 -u main.py \
-            --model_type=$model \
-            --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-            --seq_len=$i \
-            --pred_len=120 \
-            --batchsize=64 \
-            --quant=$j \
-            --eval_day=209
-        done
-    done
-done
+# for i in 960 1440 1920;do
+#     for j in -1;do
+#         for model in 'moirai2time2';do
+#             /usr/bin/python3 -u main.py \
+#             --model_type=$model \
+#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+#             --seq_len=$i \
+#             --pred_len=120 \
+#             --batchsize=64 \
+#             --quant=$j \
+#             --eval_day=209
+#         done
+#     done
+# done
 # for i in 720;do
 #     for j in 7;do
 #         for model in 'moirai2';do
@@ -105,8 +105,6 @@ done
 #         done
 #     done
 # done
-
-
 
 # for model in 'DLinear' 'PatchTST';do
 #     python -u main.py \
