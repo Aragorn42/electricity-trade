@@ -61,6 +61,9 @@ def get_model(args):
     elif args.model_type == "YingLong":
         from model import YingLong
         model = YingLong.Model(args)
+    elif args.model_type == "YingLongtime":
+        from model import YingLongtime
+        model = YingLongtime.Model(args)
     elif args.model_type == "TimeMoE":
         from model import TimeMoE
         model = TimeMoE.Model(args)

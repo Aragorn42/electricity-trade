@@ -90,21 +90,21 @@ echo $current_time
 #         done
 #     done
 # done
-# for j in 768;do
-#     for i in 80;do
-#         for model in 'YingLong';do
-#             python -u main.py \
-#             --model_type=$model \
-#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#             --seq_len=$j \
-#             --pred_len=120 \
-#             --batchsize=32 \
-#             --eval_day=209 \
-#             --quant=$i \
-#             --report
-#         done
-#     done
-# done
+for j in 768;do
+    for i in 80;do
+        for model in 'YingLongtime';do
+            python -u main.py \
+            --model_type=$model \
+            --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+            --seq_len=$j \
+            --pred_len=120 \
+            --batchsize=32 \
+            --eval_day=209 \
+            --quant=$i \
+            --report
+        done
+    done
+done
 
 # for model in 'DLinear' 'PatchTST';do
 #     python -u main.py \
