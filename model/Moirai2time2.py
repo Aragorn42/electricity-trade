@@ -82,7 +82,7 @@ class Model():
             past_feat_dynamic_real_dim=0,
         )
 
-    def forecast(self, pred_len, inputs, args, quants=None):
+    def forecast(self, pred_len, inputs, args, quants):
         """
         策略：
         1. 将输入 reshape 为 [Batch, Days, 24]。
@@ -106,9 +106,9 @@ class Model():
         x_reshaped = inputs_np[:, :num_days*period].reshape(B, num_days, period)
         
         # 3. 分位数设置
-        if quants is None:
-            # 默认分位数配置 (参考你的代码)
-            quants = [11, 13, 16, 16, 12, 14, 13, 13, 9, 15, 13, 14, 16, 13, 12, 17, 15, 12, 14, 14, 14, 17, 15, 13]
+        # if quants is None:
+        #     # 默认分位数配置 (参考你的代码)
+        #     quants = [11, 13, 16, 16, 12, 14, 13, 13, 9, 15, 13, 14, 16, 13, 12, 17, 15, 12, 14, 14, 14, 17, 15, 13]
             
         # 假设 index 10 对应 0.5 (中位数)，步长 0.05
         def get_quantile_float(idx):

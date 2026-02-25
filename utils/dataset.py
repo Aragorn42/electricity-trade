@@ -37,8 +37,7 @@ class PriceDataset(Dataset):
             end_idx = data.shape[0]
             self.data_reset = data[start_idx:]
             self.holiday_reset = self.holiday_data[start_idx:]
-        print(f"{mode} day:{(end_idx-start_idx)/24}")
-        
+
     def __len__(self):
         data_len = len(self.data_reset)
         total_window_size = self.seq_len + self.pred_len

@@ -8,7 +8,7 @@ class Model():
     def __init__(self, args):
         self.model = AutoModelForCausalLM.from_pretrained('/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Yinglong', trust_remote_code=True, torch_dtype=torch.bfloat16).cuda()
     
-    def forecast(self, pred_len, inputs, args, quants=None):
+    def forecast(self, pred_len, inputs, args, quants):
         """
         inputs: [Batch, seq_Len]
         策略: 
@@ -19,10 +19,10 @@ class Model():
         # 1. 设备与模型推理
         device = torch.device("cuda")
         inputs = inputs.to(device)
-        quants = [0, 72, 85, 85, 94, 80, 88, 90, 90, 95, 68, 82, 90, 74, 85, 80, 80, 72, 84, 74, 80, 78, 95, 75]
+        #print(quants)
+        #quants = [0, 72, 85, 85, 94, 80, 88, 90, 90, 95, 68, 82, 90, 74, 85, 80, 80, 72, 84, 74, 80, 78, 95, 75]
         # full_pred 包含了所有可能的分位数结果
         full_pred = self.model.generate(inputs, future_token=pred_len)
-        
         # 2. 定义分位数策略 (Hour 0-23 对应的 quantile index)
         indices_list = [quants[t % 24] for t in range(pred_len)]
         

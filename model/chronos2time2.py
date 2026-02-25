@@ -17,7 +17,7 @@ class Model:
         self.default_quant = args.quant  # 保留默认quant作为fallback
         self.period = 24
 
-    def forecast(self, pred_len, inputs, args, quants=None):
+    def forecast(self, pred_len, inputs, args, quants):
         """
         inputs: [Batch, seq_Len] (Tensor)
         quants: list or array of length 24 (Optional). 
@@ -27,7 +27,7 @@ class Model:
         """
         B, seq_len = inputs.shape
         num_days = seq_len // self.period
-        quants = [5, 12, 12, 12, 9, 9, 14, 9, 12, 12, 10, 12, 13, 10, 9, 9, 8, 10, 12, 11, 14, 11, 11, 11]
+        #quants = [5, 12, 12, 12, 9, 9, 14, 9, 12, 12, 10, 12, 13, 10, 9, 9, 8, 10, 12, 11, 14, 11, 11, 11]
         x_reshaped = inputs.contiguous().view(B, num_days, self.period)
         
         pred_steps = math.ceil(pred_len / self.period)

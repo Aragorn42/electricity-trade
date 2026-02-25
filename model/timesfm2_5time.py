@@ -19,7 +19,7 @@ class Model():
             fix_quantile_crossing=False # 分位数保序
         ))
 
-    def forecast(self, pred_len, inputs, args, quants=None):
+    def forecast(self, pred_len, inputs, args, quants):
         """
         基于 self.model.forecast(pred_len, inputs) 接口实现
         inputs: [Batch, seq_Len]
@@ -29,7 +29,7 @@ class Model():
         num_days = seq_len // period
         pred_steps = math.ceil(pred_len / period)
         
-        quants =  [1, 6, 6, 8, 6, 6, 7, 6, 7, 7, 6, 6, 7, 6, 0, 6, 6, 7, 6, 6, 7, 9, 6, 9]
+        # quants =  [1, 6, 6, 8, 6, 6, 7, 6, 7, 7, 6, 6, 7, 6, 0, 6, 6, 7, 6, 6, 7, 9, 6, 9]
         x_reshaped = inputs[:, :num_days * period].contiguous().view(B, num_days, period)
         
         hourly_results = []

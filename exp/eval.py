@@ -5,8 +5,11 @@ from utils.dataset import PriceDataset
 from torch.utils.data import DataLoader
 from exp.train import train
 import argparse
+from chinese_calendar import is_holiday
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import copy
 from sklearn.preprocessing import StandardScaler
 from os import path as file
 import random
@@ -93,7 +96,8 @@ def scaled_data(df):
     df_scaled.iloc[:, 1] = scaler.fit_transform(prices).flatten()
     return df_scaled, scaler
     
-def forecast(model, df, args):
+
+def forecast(model, df, args, quants=None):
     '''
     file: pd.DataFrame with 'Datetime' and 'Price' columns
     '''
@@ -132,13 +136,14 @@ def forecast(model, df, args):
                     args, 
                     inputs_for_model,   # [batch, Seq]
                     holiday_x=x_holiday_padded,   # [batch, Seq]
-                    holiday_y=y_holiday_padded    # [batch, Pred]
+                    holiday_y=y_holiday_padded,   # [batch, Pred]
+                    quants=quants
                 )
             elif args.model_type == "DLinear" or args.model_type == "PatchTST":
                 y_pred = model(inputs_for_model.to(torch.device('cuda')).unsqueeze(2))
                 y_pred = y_pred.detach().cpu().numpy()
             else:
-                y_pred = model.forecast(args.pred_len, inputs_for_model, args)
+                y_pred = model.forecast(args.pred_len, inputs_for_model, args, quants)
             #print(quant.shape)
             #y_pred = y_pred[0] if isinstance(y_pred, tuple) else y_pred
             # 如果进行了填充，需要把填充的多余部分切掉
@@ -150,51 +155,188 @@ def forecast(model, df, args):
         y_preds = np.concatenate(y_preds, axis=0) # [Total_Samples, pred_len]
         y_preds = y_preds[:, -24:]
         y_preds_ordered = y_preds.flatten()
-        return y_preds_ordered
+        return y_preds_ordered, [is_holiday(d) for d in pd.to_datetime(da_dates)]
     
+# def calc_sign_accuracy(preds, true_values):
+#     """
+#     计算符号准确率 (方向预测准确率)
+#     preds: numpy array, 预测值
+#     true_values: numpy array, 真实值
+#     """
+#     # 展平以确保维度一致
+#     p = preds.flatten()
+#     t = true_values.flatten()
+    
+#     # 截取较短的长度进行比较（防止长度不一致报错）
+#     min_len = min(len(p), len(t))
+#     p = p[-min_len:]
+#     t = t[-min_len:]
+    
+#     # 计算符号: 1为正, -1为负, 0为0
+#     # 注意：在电力差价中，0的处理可能需要根据业务逻辑，这里简单认为是相等的符号
+#     sign_p = np.sign(p)
+#     sign_t = np.sign(t)
+
+#     correct_count = np.sum(sign_p == sign_t)
+#     accuracy = correct_count / min_len
+#     return accuracy
+
+def calc_sign_accuracy_workday(preds, true_values, is_holiday):
+    """
+    计算符号准确率 (方向预测准确率)计算非节假日is_holiday=False的样本
+    preds: numpy array, 预测值
+    true_values: numpy array, 真实值
+    is_holiday: list of bool, 表示每个时间点是否为节假日 (False=非节假日, True=节假日)
+    """
+    # 确保所有输入为一维数组（避免二维输入导致的维度问题）
+    p = preds.flatten()
+    t = true_values.flatten()
+    is_holiday_arr = np.array(is_holiday).flatten()
+    
+    # 确保三个数组长度一致（取最小长度）
+    min_len = min(len(p), len(t), len(is_holiday_arr))
+    p = p[-min_len:]
+    t = t[-min_len:]
+    is_holiday_arr = is_holiday_arr[-min_len:]
+    
+    # 创建非节假日掩码（is_holiday=False 的位置为 True）
+    mask = ~is_holiday_arr  # ~ 表示逻辑非，False -> True, True -> False
+    
+    # 仅保留非节假日样本
+    p_non_holiday = p[mask]
+    t_non_holiday = t[mask]
+    
+    # 检查是否有非节假日样本
+    print(min_len, ' ', len(p_non_holiday))
+        
+    
+    # 计算符号并比较
+    sign_p = np.sign(p_non_holiday)
+    sign_t = np.sign(t_non_holiday)
+    
+    correct_count = np.sum(sign_p == sign_t)
+    accuracy = correct_count / len(p_non_holiday)
+    return accuracy
+
+import numpy as np
+from sklearn.metrics import f1_score
+
+def calc_sign_f1_workday(preds, true_values, is_holiday, average='macro'):
+    """
+    计算符号预测的 F1-score (仅计算非节假日样本)
+    preds: numpy array, 预测值
+    true_values: numpy array, 真实值
+    is_holiday: list of bool, 表示每个时间点是否为节假日
+    average: 'macro' (兼顾正负样本), 'binary' (可指定专门看负样本)
+    """
+    # 确保所有输入为一维数组
+    p = preds.flatten()
+    t = true_values.flatten()
+    is_holiday_arr = np.array(is_holiday).flatten()
+    
+    # 确保三个数组长度一致（取最小长度）
+    min_len = min(len(p), len(t), len(is_holiday_arr))
+    p = p[-min_len:]
+    t = t[-min_len:]
+    is_holiday_arr = is_holiday_arr[-min_len:]
+    
+    # 创建非节假日掩码
+    mask = ~is_holiday_arr  
+    
+    # 仅保留非节假日样本
+    p_non_holiday = p[mask]
+    t_non_holiday = t[mask]
+    
+    if len(p_non_holiday) == 0:
+        return 0.0  # 防止除零错误
+
+    # 将连续数值转换为类别标签：正数为 1，负数和零为 -1
+    # 这样就把回归/数值问题变成了二分类问题
+    pred_class = np.where(p_non_holiday > 0, 1, -1)
+    true_class = np.where(t_non_holiday > 0, 1, -1)
+    
+    # 计算 F1-score
+    # 'macro' 意味着模型必须在正电价和负电价上都预测得准，得分才会高
+    score = f1_score(true_class, pred_class, average=average)
+    
+    return score
+    
+def find_best_quants(model, inputs, scaler, true_values, args):
+    """
+    贪心算法寻找最优 Quant 组合
+    """
+    print("开始寻找最优分位数组合 (Greedy Search)...")
+    
+    # 初始化: 所有小时默认使用 quant = 12 (中位数附近)
+    # 范围 0-20, 其中 12 是初始值
+    best_quants = [int(args.quant_range * 0.6)] * 24
+    
+    baseline_preds_tensor, is_holiday = forecast(model, inputs, args, quants=best_quants)
+    baseline_preds = scaler.inverse_transform(baseline_preds_tensor.reshape(-1, 1)).flatten()
+    current_best_acc = calc_sign_accuracy_workday(baseline_preds, true_values, is_holiday)
+    current_best_f1 = calc_sign_f1_workday(baseline_preds, true_values, is_holiday)
+    print(f"初始基准准确率 (All 12): {current_best_acc:.4f}")
+    print(f"初始基准 f1-score: {current_best_f1:.4f}")
+    # 遍历 24 个小时
+    for h in range(24):
+        best_q_for_h = best_quants[h] # 默认为当前的最优值
+        improved = False
+        
+        # 使用 tqdm 显示进度，因为模型预测可能较慢
+        for q in tqdm(range(0, args.quant_range), desc=f"Optimizing Hour {h}", leave=False, dynamic_ncols=True):
+            if q == best_quants[h]:
+                continue # 跳过当前已经计算过的基准值
+            
+            # 构造临时的 quants 数组
+            temp_quants = copy.deepcopy(best_quants)
+            temp_quants[h] = q 
+            
+            # 预测
+            preds_tensor, is_holiday = forecast(model, inputs, args, quants=temp_quants)
+            
+            # 反归一化
+            preds = scaler.inverse_transform(preds_tensor.reshape(-1, 1)).flatten()
+            
+            # 计算 F1-score
+            # acc = calc_sign_f1_workday(preds, true_values, is_holiday)
+            acc = calc_sign_accuracy_workday(preds, true_values, is_holiday)
+            # 贪心策略: 如果发现更好的f1score，立即更新
+            # 或者是 >= 以便在准确率相同时优先选择某种偏好(这里严格 >)
+            if acc > current_best_acc:
+                current_best_acc = acc
+                best_q_for_h = q
+                improved = True
+        
+        # 锁定该小时的最优 quant
+        best_quants[h] = best_q_for_h
+        
+        if improved:
+            print(f"Hour {h}: 发现更优 Quant {best_q_for_h}, 当前准确率提升至: {current_best_acc:.4f}")
+        else:
+            print(f"Hour {h}: 保持默认 Quant {best_q_for_h}, 准确率: {current_best_acc:.4f}")
+
+    print(f"搜索结束. 最终最优准确率: {current_best_acc:.4f}")
+    print(f"最优 Quants 组合: {best_quants}")
+    return best_quants
+
 def evaluate(args):
-    # df with datatime and Price
-    da_raw, rt_raw, diff_raw = handle_excel(args.file_path)
-    da, da_scaler = scaled_data(da_raw)
-    rt, rt_scaler = scaled_data(rt_raw)
-    diff, diff_scaler = scaled_data(diff_raw)
-    if file.exists("output_report.xlsx"):
-        df_report = pd.read_excel("output_report.xlsx", header=None)
-    else:
-        df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
-    device = torch.device('cuda')
-    if args.need_train:
-        da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
-        rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
-        diff_preds = forecast(train(args, get_model(args).to(device), diff), diff, args)
-    else:
-        model = get_model(args)
-        # da_preds = forecast(model, da, args)
-        # rt_preds = forecast(model, rt, args)
-        diff_preds = forecast(model, diff, args)
-    # da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
-    # rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
-    diff_preds = diff_scaler.inverse_transform(diff_preds.reshape(-1, 1)).flatten()
+    _, _, diff_raw = handle_excel(args.file_path)
+    diff, diff_scaler = scaled_data(diff_raw) 
+    true_values = diff_raw.iloc[1:, 1].values 
+    model = get_model(args)
+    optimal_quants = find_best_quants(model, diff, diff_scaler, true_values, args)
+    
 
-    diff_true = diff_raw.iloc[1:, 1].values
-    # df_report, preds, trues, args
-    # this function compares the sign of preds and trues and add 2 column after df_report
-    df_report = add_prediction_columns(df_report, diff_preds, diff_true, args, is_two_variate=False)
-    if args.two_variate:
-        df_report = add_prediction_columns(df_report, da_preds - rt_preds, diff_true, args, is_two_variate=True)
+    final_preds_tensor, is_holiday = forecast(model, diff, args, quants=optimal_quants)
+    diff_preds = diff_scaler.inverse_transform(final_preds_tensor.cpu().numpy().reshape(-1, 1)).flatten()
+    
+    # 再次验证准确率
+    final_acc = calc_sign_accuracy_workday(diff_preds, true_values)
+    print(f"全时段准确率: {final_acc:.4f}")
+    final_acc_workday = calc_sign_accuracy_workday(diff_preds, true_values, is_holiday)
+    print(f"工作日准确率: {final_acc_workday:.4f}")
+    f1 = calc_sign_f1_workday(diff_preds, true_values, is_holiday)
+    print(f"工作日 F1-score: {f1:.4f}")
 
-    if args.report:
-        output_file = "output_report.xlsx"
-        # 使用 xlsxwriter 引擎
-        with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
-            df_report.to_excel(writer, index=False, header=False, sheet_name='Sheet1')
-            workbook  = writer.book
-            worksheet = writer.sheets['Sheet1']
-            format_float_3 = workbook.add_format({'num_format': '0.000'})
-            format_int = workbook.add_format({'num_format': '0'})
-            for col_idx, col_name in enumerate(df_report.columns):
-                first_cell_val = str(df_report.iloc[0, col_idx])
-                if "准确率" in first_cell_val:
-                    worksheet.set_column(col_idx, col_idx, 15, format_int)
-                else:
-                    worksheet.set_column(col_idx, col_idx, 15, format_float_3)
+    
+    return diff_preds, optimal_quants
