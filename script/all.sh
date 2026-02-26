@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=0
 export HF_ENDPOINT=https://hf-mirror.com 
 
 current_time=$(date +'%H:%M:%S')
@@ -10,86 +10,36 @@ echo $current_time
 # timesfm time input len 1080 quant6 65.29%
 # YingLong input len 24*32 quant 80(in 100) 64.96%
 
-# for j in 720;do
-#     for model in 'HolidayAvg';do
-#         python -u main.py \
-#         --model_type=$model \
-#         --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M" \
-#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#         --seq_len=$j \
-#         --pred_len=120 \
-#         --batchsize=64 \
-#         --report \
-#         --eval_day=209
-#     done
-# done
-# for i in 960 1440 1920;do
-#     for j in -1;do
-#         for model in 'moirai2time2';do
-#             /usr/bin/python3 -u main.py \
-#             --model_type=$model \
-#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#             --seq_len=$i \
-#             --pred_len=120 \
-#             --batchsize=64 \
-#             --quant=$j \
-#             --eval_day=209
-#         done
-#     done
-# done
-# for i in 720;do
-#     for j in 7;do
-#         for model in 'moirai2';do
-#             /usr/bin/python3 -u main.py \
-#             --model_type=$model \
-#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#             --seq_len=$i \
-#             --pred_len=120 \
-#             --batchsize=64 \
-#             --report \
-#             --quant=$j \
-#             --eval_day=209
-#         done
-#     done
-# done
-# for j in 1440;do
-#     for i in 12;do
-#         python -u main.py \
-#         --model_type "Chronos-2" \
-#         --seq_len $j \
-#         --pred_len 120 \
-#         --report \
-#         --quant $i \
-#         --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2"
-#     done
-# done
-# for j in 2880;do
-#     for i in 12;do
-#         python -u main.py \
-#         --model_type "Chronos-2time" \
-#         --seq_len $j \
-#         --pred_len 120 \
-#         --quant $i \
-#         --report \
-#         --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2"
-#     done
-# done
-# for j in 720;do
-#     for i in 6;do
-#         for model in 'TimesFM-2.5';do
-#             python -u main.py \
-#             --model_type=$model \
-#             --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M" \
-#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#             --seq_len=$j \
-#             --pred_len=120 \
-#             --batchsize=64 \
-#             --eval_day=209 \
-#             --report \
-#             --quant=$i
-#         done
-#     done
-# done
+for j in 720;do
+    for model in 'HolidayAvg';do
+        python -u main.py \
+        --model_type=$model \
+        --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M" \
+        --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+        --seq_len=$j \
+        --pred_len=120 \
+        --batchsize=64 \
+        --report \
+        --eval_day=209
+    done
+done
+for i in 720;do
+    for j in -1;do
+        for model in 'moirai2time2';do
+            /usr/bin/python3 -u main.py \
+            --model_type=$model \
+            --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+            --seq_len=$i \
+            --pred_len=120 \
+            --batchsize=64 \
+            --quant=$j \
+            --report \
+            --eval_day=209
+        done
+    done
+done
+
+
 for j in 768;do
     for i in 80;do
         for model in 'YingLongtime';do
@@ -106,113 +56,35 @@ for j in 768;do
     done
 done
 
-# for model in 'DLinear' 'PatchTST';do
-#     python -u main.py \
-#     --model_type=$model \
-#     --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M" \
-#     --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#     --seq_len=336 \
-#     --pred_len=120 \
-#     --batchsize=64 \
-#     --need_train \
-#     --report \
-#     --eval_day=209
-# done
-# for j in 720;do
-#     for i in 10;do
-#         python -u main.py \
-#         --model_type "Chronos-2holiday" \
-#         --seq_len $j \
-#         --pred_len 120 \
-#         --quant $i \
-#         --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2"
-#     done
-# done
-# for j in 2880;do
-#     for i in 10;do
-#         python -u main.py \
-#         --model_type "Chronos-2time2" \
-#         --seq_len $j \
-#         --pred_len 120 \
-#         --quant $i \
-#         --report \
-#         --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2"
-#     done
-# done
-# for j in 2880;do
-#     for i in 12;do
-#         python -u main.py \
-#         --model_type "Chronos-2time" \
-#         --seq_len $j \
-#         --pred_len 120 \
-#         --quant $i \
-#         --report \
-#         --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2"
-#     done
-# done
-# for j in 1080;do
-#     for i in 6;do
-#         for model in 'TimesFM-2.5time';do
-#             python -u main.py \
-#             --model_type=$model \
-#             --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M" \
-#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#             --seq_len=$j \
-#             --pred_len=120 \
-#             --batchsize=64 \
-#             --eval_day=209 \
-#             --quant=$i \
-#             --report
-#         done
-#     done
-# done 
-# for i in 720;do
-#     for model in 'TimeMoE';do
-#         /home/liym/miniconda3/envs/tfm/bin/python -u main.py \
-#         --model_type=$model \
-#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#         --seq_len=$i \
-#         --pred_len=120 \
-#         --batchsize=64 \
-#         --report \
-#         --eval_day=209
-#     done
-# done
-# for i in 360;do
-#     for model in 'Timer';do
-#         /home/liym/miniconda3/envs/tfm/bin/python -u main.py \
-#         --model_type=$model \
-#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#         --seq_len=$i \
-#         --pred_len=120 \
-#         --batchsize=64 \
-#         --report \
-#         --eval_day=209
-#     done
-# done
-# for i in 1440;do
-#     for model in 'FalconTST';do
-#         python main.py \
-#         --model_type=$model \
-#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#         --seq_len=$i \
-#         --pred_len=120 \
-#         --batchsize=2 \
-#         --eval_day=209
-#     done;
-# done
-# for i in 720;do
-#     for model in 'sundial';do
-#         /home/liym/miniconda3/envs/tfm/bin/python -u main.py \
-#         --model_type=$model \
-#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#         --seq_len=$i \
-#         --pred_len=120 \
-#         --batchsize=64 \
-#         --eval_day=209
-#     done
-# done
-# basura
+for j in 2880;do
+    for i in 10;do
+        python -u main.py \
+        --model_type "Chronos-2time2" \
+        --seq_len $j \
+        --pred_len 120 \
+        --quant $i \
+        --report \
+        --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2"
+    done
+done
+
+for j in 1080;do
+    for i in 6;do
+        for model in 'TimesFM-2.5time';do
+            python -u main.py \
+            --model_type=$model \
+            --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/TimesFM2_5_200M" \
+            --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+            --seq_len=$j \
+            --pred_len=120 \
+            --batchsize=64 \
+            --eval_day=209 \
+            --quant=$i \
+            --report
+        done
+    done
+done 
+
 
 current_time=$(date +'%H:%M:%S')
 echo $current_time

@@ -27,7 +27,8 @@ class Model:
         """
         B, seq_len = inputs.shape
         num_days = seq_len // self.period
-        quants = [5, 12, 12, 12, 9, 9, 14, 9, 12, 12, 10, 12, 13, 10, 9, 9, 8, 10, 12, 11, 14, 11, 11, 11]
+        # quants = [5, 12, 12, 12, 9, 9, 14, 9, 12, 12, 10, 12, 13, 10, 9, 9, 8, 10, 12, 11, 14, 11, 11, 11]
+        quants = [12, 15, 12, 12, 9, 10, 14, 14, 3, 12, 10, 12, 12, 12, 12, 12, 12, 12, 12, 11, 16, 15, 15, 12]
         x_reshaped = inputs.contiguous().view(B, num_days, self.period)
         
         pred_steps = math.ceil(pred_len / self.period)

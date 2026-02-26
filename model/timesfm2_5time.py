@@ -29,7 +29,8 @@ class Model():
         num_days = seq_len // period
         pred_steps = math.ceil(pred_len / period)
         
-        quants =  [1, 6, 6, 8, 6, 6, 7, 6, 7, 7, 6, 6, 7, 6, 0, 6, 6, 7, 6, 6, 7, 9, 6, 9]
+       # quants =  [1, 6, 6, 8, 6, 6, 7, 6, 7, 7, 6, 6, 7, 6, 0, 6, 6, 7, 6, 6, 7, 9, 6, 9]
+        quants = [6, 6, 6, 8, 6, 6, 7, 6, 4, 7, 5, 7, 7, 6, 6, 6, 6, 7, 6, 6, 7, 8, 6, 9]
         x_reshaped = inputs[:, :num_days * period].contiguous().view(B, num_days, period)
         
         hourly_results = []

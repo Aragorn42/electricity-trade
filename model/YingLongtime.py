@@ -19,7 +19,8 @@ class Model():
         # 1. 设备与模型推理
         device = torch.device("cuda")
         inputs = inputs.to(device)
-        quants = [0, 72, 85, 85, 94, 80, 88, 90, 90, 95, 68, 82, 90, 74, 85, 80, 80, 72, 84, 74, 80, 78, 95, 75]
+        # quants = [0, 72, 85, 85, 94, 80, 88, 90, 90, 95, 68, 82, 90, 74, 85, 80, 80, 72, 84, 74, 80, 78, 95, 75]
+        quants = [77, 96, 83, 86, 94, 89, 86, 74, 0, 93, 68, 82, 86, 73, 82, 79, 77, 71, 84, 77, 63, 79, 93, 75] 
         # full_pred 包含了所有可能的分位数结果
         full_pred = self.model.generate(inputs, future_token=pred_len)
         
