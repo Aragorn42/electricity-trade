@@ -32,14 +32,18 @@ def get_model(args):
         model = holiday_avg.Model()
     elif args.model_type == "fixed":
         from model import fixed
-        value1 = torch.tensor([
-            -42.352, -16.900, -5.879, 8.722, 19.356,16.879, -13.520, -4.291, -22.837, -6.047, 19.049, 6.494, 30.489, -9.075, 21.705, 11.469, 2.213, -1.240, -6.075, -15.271, -23.021, -26.439, -22.399, 4.697
-        ])
-        # 2024.1.1 to 2025.5.31, diff average value
-        value2 = torch.tensor([
-            0.339, 0.181, 0.250, 0.066, 0.139, 0.329, 0.211, -0.172, 0.000, 0.000, -0.003, -0.581, -1.096, -0.426, -0.024, -0.979, -0.787, -1.188, -0.324, 0.368, 0.349, -0.191, -0.152, -0.190
-        ])
-        model = fixed.Model(value1)
+        # value1 = [1]*24
+        # value2 = [1]*24
+        # # 0, 1, 8, 18, 19, 20, 21, 22等于-1
+        # value1[0], value1[1], value1[8], value1[18], value1[19], value1[20], value1[21], value1[22] = -1, -1, -1, -1, -1, -1, -1, -1
+        # # 0, 1, 2, 3, 13, 16, 17, 18, 19, 20, 21, 22, 23等于-1
+        # value2[0], value2[1], value2[2], value2[3], value2[13], value2[16], value2[17], value2[18], value2[19], value2[20], value2[21], value2[22], value2[23] = -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+        value1, value2 = [1]*24, [1]*24
+        # 0, 8为-1
+        value1[0], value1[8] = -1, -1
+        # 0, 1, 13, 18, 19, 20, 21, 22
+        value2[0], value2[1], value2[13], value2[18], value2[19], value2[20], value2[21], value2[22] = -1, -1, -1, -1, -1, -1, -1, -1
+        model = fixed.Model(value1, value2)
     elif args.model_type == "DLinear":
         from model import DLinear
         model = DLinear.Model(args)
@@ -82,6 +86,9 @@ def get_model(args):
     elif "sundial" in args.model_type.lower():
         from model import sundial
         model = sundial.Model()
+    elif "holiday_avg_workday" in args.model_type.lower():
+        from model import holiday_avg_workday
+        model = holiday_avg_workday.Model()
     return model
 
 def scaled_data(df):
@@ -127,7 +134,7 @@ def forecast(model, df, args):
 
             inputs_for_model = x_padded
 
-            if args.model_type == "HolidayAvg" or args.model_type == "Chronos-2holiday":
+            if args.model_type == "HolidayAvg" or args.model_type == "Chronos-2holiday" or args.model_type == "fixed":
                 y_pred = model.forecast(
                     args, 
                     inputs_for_model,   # [batch, Seq]
