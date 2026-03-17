@@ -1,8 +1,13 @@
-from exp.eval import evaluate
 import os
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+
+# When launched from notebooks, inline backend can leak into script env and break matplotlib import.
+if os.environ.get("MPLBACKEND") == "module://matplotlib_inline.backend_inline":
+	os.environ["MPLBACKEND"] = "Agg"
+
+from exp.eval import evaluate
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -16,7 +21,7 @@ parser.add_argument('--batchsize', type=int, default=64, help='Batch size for ev
 parser.add_argument('--two_variate', action='store_true')
 parser.add_argument('--train_day', type=int, default=438)
 parser.add_argument('--val_day', type=int, default=73)
-parser.add_argument('--eval_day', type=int, default=209, help='Number of days to evaluate')
+parser.add_argument('--eval_day', type=int, default=268, help='Number of days to evaluate')
 parser.add_argument('--need_train', action='store_true')
 parser.add_argument('--features', type=str, default="S")
 parser.add_argument('--checkpoints_path', type=str, default="./checkpoint")
@@ -25,7 +30,10 @@ parser.add_argument('--learning_rate', type=float, default=0.0001)
 parser.add_argument('--train_epochs', type=int, default=500)
 parser.add_argument('--quant', type=int, default=-1)
 parser.add_argument('--report', action='store_true')
-parser.add_argument('--quant_start_day', type=str, default=None, help='Start day (YYYY-MM-DD) for greedy quantile selection')
-parser.add_argument('--quant_end_day', type=str, default=None, help='End day (YYYY-MM-DD) for greedy quantile selection')
+parser.add_argument('--quant_start_day1', type=str, default=None)
+parser.add_argument('--quant_end_day1', type=str, default=None)
+parser.add_argument('--quant_start_day2', type=str, default=None, help='Start day (YYYY-MM-DD) for greedy quantile selection')
+parser.add_argument('--quant_end_day2', type=str, default=None, help='End day (YYYY-MM-DD) for greedy quantile selection')
+parser.add_argument('--find_quant', action='store_true', help='Whether to perform greedy quantile selection')
 args = parser.parse_args()
 evaluate(args)

@@ -29,13 +29,8 @@ for i in 720;do
         for model in 'moirai2time2';do
             /home/liym/miniconda3/envs/moirai/bin/python -u main.py \
             --model_type=$model \
-            --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
             --seq_len=$i \
-            --pred_len=120 \
-            --batchsize=64 \
-            --quant=$j \
-            --report \
-            --eval_day=268
+            --report
         done
     done
 done

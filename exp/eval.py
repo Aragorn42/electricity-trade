@@ -134,16 +134,14 @@ def forecast(model, df, args):
 
             inputs_for_model = x_padded
 
-            if args.model_type == "HolidayAvg" or args.model_type == "Chronos-2holiday" or args.model_type == "fixed":
+            if args.model_type == "HolidayAvg":
                 y_pred = model.forecast(
                     args, 
                     inputs_for_model,   # [batch, Seq]
                     holiday_x=x_holiday_padded,   # [batch, Seq]
                     holiday_y=y_holiday_padded    # [batch, Pred]
                 )
-            elif args.model_type == "DLinear" or args.model_type == "PatchTST":
-                y_pred = model(inputs_for_model.to(torch.device('cuda')).unsqueeze(2))
-                y_pred = y_pred.detach().cpu().numpy()
+                y_pred = y_pred.reshape(args.batchsize, args.pred_len, 1) # [Batch, pred_len, 1]
             else:
                 y_pred = model.forecast(args.pred_len, inputs_for_model, args)
             # y_pred: [Batch, 24*pred_len, Num_Quantiles]
@@ -183,10 +181,6 @@ def calc_sign_accuracy_workday(preds, true_values, is_holiday):
     p_non_holiday = p[mask]
     t_non_holiday = t[mask]
     
-    # 检查是否有非节假日样本
-    print(min_len, ' ', len(p_non_holiday))
-        
-    
     # 计算符号并比较
     sign_p = np.sign(p_non_holiday)
     sign_t = np.sign(t_non_holiday)
@@ -207,22 +201,27 @@ def evaluate(args):
 
     model = get_model(args)
     diff_preds = forecast(model, diff, args) # [timestamp, Num_Quantiles]
-    orig_shape = diff_preds.shape
     
+    orig_shape = diff_preds.shape
     diff_preds = diff_scaler.inverse_transform(
         diff_preds.reshape(-1, 1)
     ).reshape(orig_shape)
     
     diff_true = diff_raw.iloc[1:, 1].values
     timestramp = diff_raw.iloc[-(args.eval_day*24):, 0].values
-    diff_preds = get_best_quants(
-        timestramp,
-        diff_preds,
-        diff_true,
-        start=getattr(args, "quant_start_day", None),
-        end=getattr(args, "quant_end_day", None)
-    ) # [timestamp]
-    print(timestramp)
+    # if args.find_best_quants:
+    if args.find_quant:
+        diff_preds = get_best_quants(
+            timestramp,
+            diff_preds,
+            diff_true,
+            start1=getattr(args, "quant_start_day1", None),
+            end1=getattr(args, "quant_end_day1", None),
+            start2=getattr(args, "quant_start_day2", None),
+            end2=getattr(args, "quant_end_day2", None)
+        ) # [timestamp]
+    else:
+        diff_preds = diff_preds[:, int(len(diff_preds[0])*0.6) if args.model_type != "YingLongtime" else (int(len(diff_preds[0])*0.8))]
     df_report = add_prediction_columns(df_report, diff_preds, diff_true, args, is_two_variate=False)
 
     if args.report:
@@ -241,7 +240,7 @@ def evaluate(args):
                 else:
                     worksheet.set_column(col_idx, col_idx, 15, format_float_3)
 
-def get_best_quants(timestramp, diff_preds, diff_true, start=None, end=None):
+def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, start2=None, end2=None):
     # diff_preds shape -> [timestamp, Num_Quantiles]
     preds = np.asarray(diff_preds)
 
@@ -259,13 +258,19 @@ def get_best_quants(timestramp, diff_preds, diff_true, start=None, end=None):
     valid_time_mask = ~pd.isna(times)
     range_mask = valid_time_mask.copy()
 
-    if start is not None:
-        start_dt = pd.to_datetime(start).normalize()
+    if start1 is not None:
+        start_dt = pd.to_datetime(start1).normalize()
         range_mask &= (times >= start_dt)
-    if end is not None:
-        end_dt = pd.to_datetime(end).normalize() + pd.Timedelta(hours=23)
+    if end1 is not None:
+        end_dt = pd.to_datetime(end1).normalize() + pd.Timedelta(hours=23)
         range_mask &= (times <= end_dt)
-
+    if start2 is not None:
+        start_dt2 = pd.to_datetime(start2).normalize()
+        range_mask &= (times >= start_dt2)
+    if end2 is not None:
+        end_dt2 = pd.to_datetime(end2).normalize() + pd.Timedelta(hours=23)
+        range_mask &= (times <= end_dt2)
+        
     if not np.any(range_mask):
         range_mask = valid_time_mask
 
