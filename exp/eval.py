@@ -3,13 +3,13 @@ from utils.data_process import handle_excel, init_report_df, add_prediction_colu
 import torch
 from utils.dataset import PriceDataset
 from torch.utils.data import DataLoader
-from exp.train import train
 import argparse
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from os import path as file
 import random
+import chinese_calendar as chinese_holiday
 
 seed = 42
 random.seed(seed)
@@ -146,49 +146,84 @@ def forecast(model, df, args):
                 y_pred = y_pred.detach().cpu().numpy()
             else:
                 y_pred = model.forecast(args.pred_len, inputs_for_model, args)
-            #print(quant.shape)
-            #y_pred = y_pred[0] if isinstance(y_pred, tuple) else y_pred
+            # y_pred: [Batch, 24*pred_len, Num_Quantiles]
             # 如果进行了填充，需要把填充的多余部分切掉
             if current_batch_size < args.batchsize:
-                y_pred = y_pred[:current_batch_size]
+                y_pred = y_pred[:current_batch_size, :, :]
             y_preds.append(y_pred)
             
         # 合并所有 Batch
-        y_preds = np.concatenate(y_preds, axis=0) # [Total_Samples, pred_len]
-        y_preds = y_preds[:, -24:]
-        y_preds_ordered = y_preds.flatten()
-        return y_preds_ordered
+        y_preds = np.concatenate(y_preds, axis=0) # [Sum_Batch, 24*pred_len, Num_Quantiles]
+        y_preds = y_preds[:, -24:, :] 
+        
+        return y_preds.reshape(-1, y_preds.shape[-1]) # [timestramp, Num_Quantiles]
     
+def calc_sign_accuracy_workday(preds, true_values, is_holiday):
+    """
+    计算符号准确率 (方向预测准确率)计算非节假日is_holiday=False的样本
+    preds: numpy array, 预测值
+    true_values: numpy array, 真实值
+    is_holiday: list of bool, 表示每个时间点是否为节假日 (False=非节假日, True=节假日)
+    """
+    # 确保所有输入为一维数组（避免二维输入导致的维度问题）
+    p = preds.flatten()
+    t = true_values.flatten()
+    is_holiday_arr = np.array(is_holiday).flatten()
+    
+    # 确保三个数组长度一致（取最小长度）
+    min_len = min(len(p), len(t), len(is_holiday_arr))
+    p = p[-min_len:]
+    t = t[-min_len:]
+    is_holiday_arr = is_holiday_arr[-min_len:]
+    
+    # 创建非节假日掩码（is_holiday=False 的位置为 True）
+    mask = ~is_holiday_arr  # ~ 表示逻辑非，False -> True, True -> False
+    
+    # 仅保留非节假日样本
+    p_non_holiday = p[mask]
+    t_non_holiday = t[mask]
+    
+    # 检查是否有非节假日样本
+    print(min_len, ' ', len(p_non_holiday))
+        
+    
+    # 计算符号并比较
+    sign_p = np.sign(p_non_holiday)
+    sign_t = np.sign(t_non_holiday)
+    
+    correct_count = np.sum(sign_p == sign_t)
+    accuracy = correct_count / len(p_non_holiday)
+    return accuracy
+
 def evaluate(args):
     # df with datatime and Price
-    da_raw, rt_raw, diff_raw = handle_excel(args.file_path)
-    da, da_scaler = scaled_data(da_raw)
-    rt, rt_scaler = scaled_data(rt_raw)
+    _, _, diff_raw = handle_excel(args.file_path)
     diff, diff_scaler = scaled_data(diff_raw)
     if file.exists("output_report.xlsx"):
         df_report = pd.read_excel("output_report.xlsx", header=None)
     else:
-        df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
+        df_report = init_report_df(args, diff_raw)
     device = torch.device('cuda')
-    if args.need_train:
-        da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
-        rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
-        diff_preds = forecast(train(args, get_model(args).to(device), diff), diff, args)
-    else:
-        model = get_model(args)
-        # da_preds = forecast(model, da, args)
-        # rt_preds = forecast(model, rt, args)
-        diff_preds = forecast(model, diff, args)
-    # da_preds = da_scaler.inverse_transform(da_preds.reshape(-1, 1)).flatten()
-    # rt_preds = rt_scaler.inverse_transform(rt_preds.reshape(-1, 1)).flatten()
-    diff_preds = diff_scaler.inverse_transform(diff_preds.reshape(-1, 1)).flatten()
 
+    model = get_model(args)
+    diff_preds = forecast(model, diff, args) # [timestamp, Num_Quantiles]
+    orig_shape = diff_preds.shape
+    
+    diff_preds = diff_scaler.inverse_transform(
+        diff_preds.reshape(-1, 1)
+    ).reshape(orig_shape)
+    
     diff_true = diff_raw.iloc[1:, 1].values
-    # df_report, preds, trues, args
-    # this function compares the sign of preds and trues and add 2 column after df_report
+    timestramp = diff_raw.iloc[-(args.eval_day*24):, 0].values
+    diff_preds = get_best_quants(
+        timestramp,
+        diff_preds,
+        diff_true,
+        start=getattr(args, "quant_start_day", None),
+        end=getattr(args, "quant_end_day", None)
+    ) # [timestamp]
+    print(timestramp)
     df_report = add_prediction_columns(df_report, diff_preds, diff_true, args, is_two_variate=False)
-    if args.two_variate:
-        df_report = add_prediction_columns(df_report, da_preds - rt_preds, diff_true, args, is_two_variate=True)
 
     if args.report:
         output_file = "output_report.xlsx"
@@ -205,3 +240,83 @@ def evaluate(args):
                     worksheet.set_column(col_idx, col_idx, 15, format_int)
                 else:
                     worksheet.set_column(col_idx, col_idx, 15, format_float_3)
+
+def get_best_quants(timestramp, diff_preds, diff_true, start=None, end=None):
+    # diff_preds shape -> [timestamp, Num_Quantiles]
+    preds = np.asarray(diff_preds)
+
+    true_arr = np.asarray(diff_true).flatten()
+    times = pd.to_datetime(np.asarray(timestramp))
+
+    min_len = min(len(times), len(preds), len(true_arr))
+    if min_len == 0:
+        return np.array([])
+
+    times = times[-min_len:]
+    preds = preds[-min_len:]
+    true_arr = true_arr[-min_len:]
+
+    valid_time_mask = ~pd.isna(times)
+    range_mask = valid_time_mask.copy()
+
+    if start is not None:
+        start_dt = pd.to_datetime(start).normalize()
+        range_mask &= (times >= start_dt)
+    if end is not None:
+        end_dt = pd.to_datetime(end).normalize() + pd.Timedelta(hours=23)
+        range_mask &= (times <= end_dt)
+
+    if not np.any(range_mask):
+        range_mask = valid_time_mask
+
+    if not np.any(range_mask):
+        return preds[:, 0]
+
+    times_in_range = times[range_mask]
+    is_workday_in_range = np.array([
+        chinese_holiday.is_workday(ts.date()) if pd.notna(ts) else False
+        for ts in times_in_range
+    ], dtype=bool)
+    is_holiday_in_range = ~is_workday_in_range
+
+    num_quants = preds.shape[1]
+    # 未来未搜索到的小时先用 0 分位，逐小时贪心替换。
+    best_preds = preds[:, 0].copy()
+    selected_quants = np.zeros(24, dtype=int)
+
+    time_hours = pd.Series(times).dt.hour.to_numpy()
+
+    for hour in range(24):
+        hour_mask = (time_hours == hour)
+        if not np.any(hour_mask):
+            continue
+
+        best_hour_quant = 0
+        best_hour_acc = -1.0
+
+        for quant_idx in range(num_quants):
+            candidate_preds = best_preds.copy()
+            candidate_preds[hour_mask] = preds[hour_mask, quant_idx]
+
+            acc = calc_sign_accuracy_workday(
+                candidate_preds[range_mask],
+                true_arr[range_mask],
+                is_holiday_in_range
+            )
+
+            if acc > best_hour_acc:
+                best_hour_acc = acc
+                best_hour_quant = quant_idx
+
+        selected_quants[hour] = best_hour_quant
+        best_preds[hour_mask] = preds[hour_mask, best_hour_quant]
+
+    final_acc = calc_sign_accuracy_workday(
+        best_preds[range_mask],
+        true_arr[range_mask],
+        is_holiday_in_range
+    )
+    print(f"Greedy quantile indices by hour: {selected_quants.tolist()}")
+    print(f"Best workday sign accuracy in range: {final_acc:.4f}")
+
+    return best_preds

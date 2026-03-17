@@ -5,33 +5,22 @@ from xlsm to 3 csv
 import pandas as pd
 import numpy as np
 
-def init_report_df(args, da_file, rt_file, diff_file):
-    df1 = da_file.iloc[-(args.eval_day*24):, :]
-    df2 = rt_file.iloc[-(args.eval_day*24):, :]
+def init_report_df(args, diff_file):
     df3 = diff_file.iloc[-(args.eval_day*24):, :]
-    
-    df1 = df1.rename(columns={'Price': 'DA_Price'})
-    df2 = df2.rename(columns={'Price': 'RT_Price'})
     df3 = df3.rename(columns={'Price': 'Diff_Price'})
-    
-    merged_df = pd.merge(df1, df2, on='Datetime', how='outer')
-    merged_df = pd.merge(merged_df, df3, on='Datetime', how='outer')
-    
-    target_cols = ['Datetime', 'DA_Price', 'RT_Price', 'Diff_Price']
-    merged_df = merged_df[target_cols]
+    target_cols = ['Datetime', 'Diff_Price']
+    merged_df = df3[target_cols]
     
     merged_df = merged_df.sort_values('Datetime').reset_index(drop=True)
 
     header_data = [
-        ['时间戳', '日前电价', '实时电价', '日前实时差价']
+        ['时间戳', '日前实时差价']
     ]
     
     header_df = pd.DataFrame(header_data, columns=target_cols)
-    
-    # 6. 垂直拼接
+
     final_df = pd.concat([header_df, merged_df], ignore_index=True)
     
-    # 转为 object 类型，方便后续写入字符串
     final_df = final_df.astype(object)
     
     return final_df

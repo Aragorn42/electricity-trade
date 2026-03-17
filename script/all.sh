@@ -23,50 +23,38 @@ echo $current_time
 #         --eval_day=268
 #     done
 # done
-# for j in 0;do
-#     for model in 'fixed';do
-#         python -u main.py \
-#         --model_type=$model \
-#         --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#         --seq_len=$j \
-#         --pred_len=120 \
-#         --batchsize=64 \
-#         --report \
-#         --train_day=100 \
-#         --eval_day=365
-#     done
-# done
-# for i in 720;do
-#     for j in -1;do
-#         for model in 'moirai2time2';do
-#             python3 -u main.py \
-#             --model_type=$model \
-#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-#             --seq_len=$i \
-#             --pred_len=120 \
-#             --batchsize=64 \
-#             --quant=$j \
-#             --report \
-#             --eval_day=268
-#         done
-#     done
-# done
 
-for j in 768;do
-    for i in 80;do
-        for model in 'YingLongtime';do
-            python -u main.py \
+for i in 720;do
+    for j in -1;do
+        for model in 'moirai2time2';do
+            /home/liym/miniconda3/envs/moirai/bin/python -u main.py \
             --model_type=$model \
             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
-            --seq_len=$j \
+            --seq_len=$i \
             --pred_len=120 \
-            --batchsize=32 \
-            --eval_day=268 \
-            --quant=$i \
-            --report
+            --batchsize=64 \
+            --quant=$j \
+            --report \
+            --eval_day=268
         done
     done
 done
+
+# for j in 768;do
+#     for i in 80;do
+#         for model in 'YingLongtime';do
+#             python -u main.py \
+#             --model_type=$model \
+#             --file_path='/home/liym/code/ElectricityTrade/electricity-trade/dataset/日前实时套利计算.xlsm' \
+#             --seq_len=$j \
+#             --pred_len=120 \
+#             --batchsize=32 \
+#             --eval_day=268 \
+#             --quant=$i \
+#             --report
+#         done
+#     done
+# done
 
 # for j in 2880;do
 #     for i in 10;do
@@ -77,6 +65,8 @@ done
 #         --quant $i \
 #         --report \
 #         --eval_day=268 \
+#         --quant_start_day "2026-01-01" \
+#         --quant_end_day "2026-1-31" \
 #         --model_path="/home/liym/code/ElectricityTrade/electricity-trade/checkpoint/Chronos2"
 #     done
 # done

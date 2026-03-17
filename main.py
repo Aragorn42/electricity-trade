@@ -1,5 +1,7 @@
 from exp.eval import evaluate
 import os
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 import argparse
 
@@ -23,5 +25,7 @@ parser.add_argument('--learning_rate', type=float, default=0.0001)
 parser.add_argument('--train_epochs', type=int, default=500)
 parser.add_argument('--quant', type=int, default=-1)
 parser.add_argument('--report', action='store_true')
+parser.add_argument('--quant_start_day', type=str, default=None, help='Start day (YYYY-MM-DD) for greedy quantile selection')
+parser.add_argument('--quant_end_day', type=str, default=None, help='End day (YYYY-MM-DD) for greedy quantile selection')
 args = parser.parse_args()
 evaluate(args)
