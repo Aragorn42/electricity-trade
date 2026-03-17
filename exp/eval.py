@@ -1,4 +1,5 @@
 #from model import #timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, TimeMoE#, chronos2, chronos2time, chronos2holiday, YingLong, chronos2time2
+from model import qwen35b
 from utils.data_process import handle_excel, init_report_df, add_prediction_columns
 import torch
 from utils.dataset import PriceDataset
@@ -89,6 +90,9 @@ def get_model(args):
     elif "holiday_avg_workday" in args.model_type.lower():
         from model import holiday_avg_workday
         model = holiday_avg_workday.Model()
+    elif "qwen35b" in args.model_type.lower():
+        from model import qwen35b
+        model = qwen35b.Model(args)
     return model
 
 def scaled_data(df):
