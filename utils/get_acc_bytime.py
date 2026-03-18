@@ -1,4 +1,5 @@
 import argparse
+import time
 
 import numpy as np
 import pandas as pd
@@ -32,10 +33,11 @@ def vote(input_path):
     df["时间戳"] = pd.to_datetime(df["时间戳"])
 
     pred_cols = [c for c in df.columns if "预测结果" in c]
-    tmp = df[pred_cols].apply(pd.to_numeric, errors="coerce").fillna(0).astype(int)
+    tmp = df[pred_cols].apply(pd.to_numeric, errors="coerce").astype(int)
     ones = tmp.sum(axis=1)
     result = (ones > (len(pred_cols) - ones)).astype(int)
     out = pd.DataFrame({"时间戳": df["时间戳"], "预测结果": result})
+    out.to_excel(f"{time.strftime('%Y%m%d_%H%M%S')}_vote.xlsx", index=False)
     return out
 
 
@@ -58,7 +60,7 @@ def get_accuracy_table(file_path, start_date, end_date, recognize):
     df = df[(df["时间戳"] >= start_ts) & (df["时间戳"] <= end_ts)]
     data_cols = [col for col in df.columns if "预测结果" in col]
 
-    df[data_cols] = df[data_cols].apply(pd.to_numeric, errors="coerce").fillna(0).astype(int)
+    df[data_cols] = df[data_cols].apply(pd.to_numeric, errors="coerce").astype(int)
 
     for col in data_cols:
         df[col] = (df[col] == df["真实符号"]).astype(int)

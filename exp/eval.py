@@ -283,23 +283,32 @@ def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, s
         for ts in times_in_range
     ], dtype=bool)
     is_holiday_in_range = ~is_workday_in_range
-
+    
     num_quants = preds.shape[1]
-    # 未来未搜索到的小时先用 0 分位，逐小时贪心替换。
-    best_preds = preds[:, 0].copy()
-    selected_quants = np.zeros(24, dtype=int)
+    init_q = int(num_quants * 0.6)
+
+    # 初始基线：全小时都用同一个分位
+    best_preds = preds[:, init_q].copy()
+    selected_quants = np.full(24, init_q, dtype=int)
+
+    current_best_acc = calc_sign_accuracy_workday(
+        best_preds[range_mask],
+        true_arr[range_mask],
+        is_holiday_in_range
+    )
 
     time_hours = pd.Series(times).dt.hour.to_numpy()
 
     for hour in range(24):
         hour_mask = (time_hours == hour)
-        if not np.any(hour_mask):
-            continue
 
-        best_hour_quant = 0
-        best_hour_acc = -1.0
+        best_hour_quant = selected_quants[hour]
+        improved = False
 
         for quant_idx in range(num_quants):
+            if quant_idx == selected_quants[hour]:
+                continue
+
             candidate_preds = best_preds.copy()
             candidate_preds[hour_mask] = preds[hour_mask, quant_idx]
 
@@ -309,13 +318,13 @@ def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, s
                 is_holiday_in_range
             )
 
-            if acc > best_hour_acc:
-                best_hour_acc = acc
+            if acc > current_best_acc:
+                current_best_acc = acc
                 best_hour_quant = quant_idx
+                improved = True
 
         selected_quants[hour] = best_hour_quant
         best_preds[hour_mask] = preds[hour_mask, best_hour_quant]
-
     final_acc = calc_sign_accuracy_workday(
         best_preds[range_mask],
         true_arr[range_mask],

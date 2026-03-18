@@ -100,10 +100,10 @@ def apply_decision(df, decision_table, model_cols, start_time=None, end_time=Non
 
     df_filtered = df.copy()
     if start_time is not None:
-        df_filtered = df_filtered[df_filtered['时间戳'] >= pd.to_datetime(start_time)]
+        df_filtered = df_filtered[pd.to_datetime(df_filtered['时间戳']) >= pd.to_datetime(start_time)]
     if end_time is not None:
-        df_filtered = df_filtered[df_filtered['时间戳'] <= pd.to_datetime(end_time)]
-            
+        df_filtered = df_filtered[pd.to_datetime(df_filtered['时间戳']) <= pd.to_datetime(end_time)]
+
     if df_filtered.empty:
         print("警告：指定的时间范围内没有数据！")
         return df_filtered, 0.0

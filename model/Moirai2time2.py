@@ -94,17 +94,47 @@ class Model():
         pred_days = math.ceil(pred_len / period)
         # [Batch, seq_len] -> [Batch, num_days, 24]
         inputs_np = inputs.detach().cpu().numpy()
-
-        x_reshaped = inputs_np[:, :num_days * period].reshape(B, num_days, period)
-
+        x_reshaped = inputs_np[:, :num_days*period].reshape(B, num_days, period)
+        predictor = self.model.create_predictor(batch_size=BSZ)
         hourly_results = []
         for h in range(period):
-            input_h = x_reshaped[:, :, h]  # [B, num_days]
-            preds_h = self.model.predict(
-                past_target=[row for row in input_h]
-            )  # [B, Q, future_time]
-            hourly_results.append(preds_h[:, :, :pred_days])  # [B, Q, pred_days]
+            input_h = x_reshaped[:, :, h]
+            ds_h = ListDataset(
+                [
+                    {
+                        "target": row, 
+                        "start": "2024-01-01 00:00:00" 
+                    } 
+                    for row in input_h
+                ],
+                freq="D"
+            )
+            
+            forecasts = list(predictor.predict(ds_h))
+
+            # QuantileForecastGenerator 会把 quantile levels 写入 forecast_keys。
+            # 若不存在则回退到模型配置中的 quantile_levels。
+            forecast_keys = getattr(forecasts[0], "forecast_keys", None)
+            if forecast_keys is not None:
+                quantile_keys = [k for k in forecast_keys if str(k).lower() != "mean"]
+            else:
+                quantile_levels = getattr(self.model.module, "quantile_levels", None)
+                quantile_keys = [f"{float(q):g}" for q in quantile_levels]
+
+            per_hour = []
+            for fcst in forecasts:
+                q_mat = np.stack(
+                    [np.asarray(fcst.quantile(str(qk)), dtype=np.float32) for qk in quantile_keys],
+                    axis=-1,
+                )
+                per_hour.append(q_mat[:pred_days])
+
+            # [Batch, pred_days, Num_Quantiles]
+            hourly_results.append(np.stack(per_hour, axis=0))
 
         # [Batch, 24, pred_days, Num_Quantiles]
         forecast_stacked = np.stack(hourly_results, axis=1)
-        return rearrange(forecast_stacked, 'b h d q -> b (d h) q')
+        # [Batch, pred_days, 24, Num_Quantiles] -> [Batch, pred_len', Num_Quantiles]
+        forecast_merged = np.transpose(forecast_stacked, (0, 2, 1, 3)).reshape(B, -1, forecast_stacked.shape[-1])
+
+        return forecast_merged[:, :pred_len, :]
