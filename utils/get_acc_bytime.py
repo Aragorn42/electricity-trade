@@ -24,7 +24,7 @@ def transform_excel_structure(file_path):
         new_df[f"{clean_name}_预测结果"] = model_pred
         new_df[col] = df[col]
 
-    new_df.to_excel("temp.xlsx", index=False)
+    # new_df.to_excel("temp.xlsx", index=False)
     return new_df
 
 
@@ -37,7 +37,7 @@ def vote(input_path):
     ones = tmp.sum(axis=1)
     result = (ones > (len(pred_cols) - ones)).astype(int)
     out = pd.DataFrame({"时间戳": df["时间戳"], "预测结果": result})
-    out.to_excel(f"{time.strftime('%Y%m%d_%H%M%S')}_vote.xlsx", index=False)
+    # out.to_excel(f"{time.strftime('%Y%m%d_%H%M%S')}_vote.xlsx", index=False)
     return out
 
 
@@ -56,7 +56,7 @@ def get_accuracy_table(file_path, start_date, end_date, recognize):
     df["类型"] = df["时间戳"].dt.date.apply(lambda x: "工作日" if is_workday(x) else "非工作日")
 
     start_ts = pd.to_datetime(start_date)
-    end_ts = pd.to_datetime(end_date)
+    end_ts = pd.to_datetime(end_date) + pd.Timedelta(hours=23)
     df = df[(df["时间戳"] >= start_ts) & (df["时间戳"] <= end_ts)]
     data_cols = [col for col in df.columns if "预测结果" in col]
 
@@ -82,10 +82,10 @@ def get_accuracy_table(file_path, start_date, end_date, recognize):
 
 def main():
     parser = argparse.ArgumentParser(description="Compute grouped hourly accuracy tables.")
-    parser.add_argument("--file_path", required=True, help="Input Excel file path")
-    parser.add_argument("--start_date", required=True, help="Start date, e.g. 2026-01-01")
-    parser.add_argument("--end_date", required=True, help="End date, e.g. 2026-01-31")
-    parser.add_argument("--recognize", required=True, help="Output file prefix")
+    parser.add_argument("--file_path", default="output_report.xlsx", help="Input Excel file path")
+    parser.add_argument("--start_date", default="2025-04-01", help="Start date, e.g. 2026-01-01")
+    parser.add_argument("--end_date", default="2025-04-30", help="End date, e.g. 2026-01-31")
+    parser.add_argument("--recognize", default="output", help="Output file prefix")
     args = parser.parse_args()
 
     get_accuracy_table(
