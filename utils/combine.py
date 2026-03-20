@@ -113,9 +113,9 @@ def reshape_and_append():
 if __name__ == "__main__":
     # ================= 配置区域 =================
     DATA_FOLDER = './'           # 数据文件所在的文件夹路径
-    FILE_EXTENSION = '20260320_*_vote.xlsx'         # 文件格式，假设为 csv
+    FILE_EXTENSION = 'chronos2time*-*-*.xlsx'         # 文件格式，假设为 csv
     TIME_COL = '时间戳'           # 你的时间戳列名
-    TARGET_COL = '预测结果'            # 你的目标列名
+    TARGET_COL = 'Chronos-2time2差价预测_2880to120'            # 你的目标列名
     OUTPUT_FILE = 'combined.csv'     # 最终输出的长文件名
 
     # 定义需要提取的年月顺序（2025.4 到 2026.1 共 10 个月）
@@ -129,11 +129,11 @@ if __name__ == "__main__":
     
     process_data()
     
-    INPUT_FILE = 'val.csv'         # 之前生成的合并长文件
+    INPUT_FILE = 'combined.csv'         # 之前生成的合并长文件
     EXTERNAL_EXCEL = '/home/liym/code/ElectricityTrade/electricity-trade/dataset/2026年1-2月现货价格.xlsx'  # 要被写入的新/外部 Excel 文件
-    NEW_SHEET_NAME = '预测数值'          # 写入新文件时的 Sheet 名称
+    NEW_SHEET_NAME = '预测结果'          # 写入新文件时的 Sheet 名称
     TIME_COL = '时间戳'               # 时间戳列名
-    TARGET_COL = 'val'                # 目标数据列名
+    TARGET_COL = 'Chronos-2time2差价预测_2880to120'                # 目标数据列名
     START_DATE = None
     END_DATE = None    
 

@@ -24,7 +24,7 @@ def transform_excel_structure(file_path):
         new_df[f"{clean_name}_预测结果"] = model_pred
         new_df[col] = df[col]
 
-    # new_df.to_excel("temp.xlsx", index=False)
+    #new_df.to_excel("temp.xlsx", index=False)
     return new_df
 
 
@@ -38,7 +38,7 @@ def vote(input_path):
     ones = tmp.sum(axis=1)
     result = (ones > (len(pred_cols) - ones)).astype(int)
     out = pd.DataFrame({"时间戳": df["时间戳"], "预测结果": result, "模型判断结果": model_vote_bits})
-    #out.to_excel(f"{time.strftime('%Y%m%d_%H%M%S')}_vote.xlsx", index=False)
+    out.to_excel(f"{time.strftime('%Y%m%d_%H%M%S')}_vote.xlsx", index=False)
     return out
 
 
@@ -78,7 +78,7 @@ def get_accuracy_table(file_path, start_date, end_date, recognize):
         print(f"{col_name} 准确率表")
         print(table)
 
-        #table.to_excel(f"{recognize}_{start_date}.xlsx")
+        table.to_excel(f"{recognize}_{start_date}.xlsx")
 
 
 def main():
