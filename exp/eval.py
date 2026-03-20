@@ -1,4 +1,6 @@
 #from model import #timesfm2_5time, timesfm2_5, naive_avg, holiday_avg, fixed, DLinear, PatchTST, TimeMoE#, chronos2, chronos2time, chronos2holiday, YingLong, chronos2time2
+from sklearn.metrics import f1_score
+
 from utils.data_process import handle_excel, init_report_df, add_prediction_columns
 import torch
 from utils.dataset import PriceDataset
@@ -156,14 +158,47 @@ def forecast(model, df, args):
         
         return y_preds.reshape(-1, y_preds.shape[-1]) # [timestramp, Num_Quantiles]
     
-def calc_sign_accuracy_workday(preds, true_values, is_holiday):
+# def calc_sign_accuracy_workday(preds, true_values, is_holiday):
+#     """
+#     计算符号准确率 (方向预测准确率)计算非节假日is_holiday=False的样本
+#     preds: numpy array, 预测值
+#     true_values: numpy array, 真实值
+#     is_holiday: list of bool, 表示每个时间点是否为节假日 (False=非节假日, True=节假日)
+#     """
+#     # 确保所有输入为一维数组（避免二维输入导致的维度问题）
+#     p = preds.flatten()
+#     t = true_values.flatten()
+#     is_holiday_arr = np.array(is_holiday).flatten()
+    
+#     # 确保三个数组长度一致（取最小长度）
+#     min_len = min(len(p), len(t), len(is_holiday_arr))
+#     p = p[-min_len:]
+#     t = t[-min_len:]
+#     is_holiday_arr = is_holiday_arr[-min_len:]
+    
+#     # 创建非节假日掩码（is_holiday=False 的位置为 True）
+#     mask = ~is_holiday_arr  # ~ 表示逻辑非，False -> True, True -> False
+    
+#     # 仅保留非节假日样本
+#     p_non_holiday = p[mask]
+#     t_non_holiday = t[mask]
+    
+#     # 计算符号并比较
+#     sign_p = np.sign(p_non_holiday)
+#     sign_t = np.sign(t_non_holiday)
+    
+#     correct_count = np.sum(sign_p == sign_t)
+#     accuracy = correct_count / len(p_non_holiday)
+#     return accuracy
+def calc_sign_f1_workday(preds, true_values, is_holiday, average='macro'):
     """
-    计算符号准确率 (方向预测准确率)计算非节假日is_holiday=False的样本
+    计算符号预测的 F1-score (仅计算非节假日样本)
     preds: numpy array, 预测值
     true_values: numpy array, 真实值
-    is_holiday: list of bool, 表示每个时间点是否为节假日 (False=非节假日, True=节假日)
+    is_holiday: list of bool, 表示每个时间点是否为节假日
+    average: 'macro' (兼顾正负样本), 'binary' (可指定专门看负样本)
     """
-    # 确保所有输入为一维数组（避免二维输入导致的维度问题）
+    # 确保所有输入为一维数组
     p = preds.flatten()
     t = true_values.flatten()
     is_holiday_arr = np.array(is_holiday).flatten()
@@ -174,20 +209,27 @@ def calc_sign_accuracy_workday(preds, true_values, is_holiday):
     t = t[-min_len:]
     is_holiday_arr = is_holiday_arr[-min_len:]
     
-    # 创建非节假日掩码（is_holiday=False 的位置为 True）
-    mask = ~is_holiday_arr  # ~ 表示逻辑非，False -> True, True -> False
+    # 创建非节假日掩码
+    mask = ~is_holiday_arr  
     
     # 仅保留非节假日样本
     p_non_holiday = p[mask]
     t_non_holiday = t[mask]
     
-    # 计算符号并比较
-    sign_p = np.sign(p_non_holiday)
-    sign_t = np.sign(t_non_holiday)
+    if len(p_non_holiday) == 0:
+        return 0.0  # 防止除零错误
+
+    # 将连续数值转换为类别标签：正数为 1，负数和零为 -1
+    # 这样就把回归/数值问题变成了二分类问题
+    pred_class = np.where(p_non_holiday > 0, 1, -1)
+    true_class = np.where(t_non_holiday > 0, 1, -1)
     
-    correct_count = np.sum(sign_p == sign_t)
-    accuracy = correct_count / len(p_non_holiday)
-    return accuracy
+    # 计算 F1-score
+    # 'macro' 意味着模型必须在正电价和负电价上都预测得准，得分才会高
+    score = f1_score(true_class, pred_class, average=average)
+    
+    return score
+    
 
 def evaluate(args):
     # df with datatime and Price
@@ -223,7 +265,8 @@ def evaluate(args):
     else:
         diff_preds = diff_preds[:, int(len(diff_preds[0])*0.6) if args.model_type != "YingLongtime" else (int(len(diff_preds[0])*0.8))]
     df_report = add_prediction_columns(df_report, diff_preds, diff_true, args, is_two_variate=False)
-
+    if args.model_type == "Chronos-2time2":
+        df_report.to_excel(f"chronos2time2{args.quant_start_day1}.xlsx", index=False, header=False)
     if args.report:
         output_file = "output_report.xlsx"
         # 使用 xlsxwriter 引擎
@@ -291,7 +334,7 @@ def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, s
     best_preds = preds[:, init_q].copy()
     selected_quants = np.full(24, init_q, dtype=int)
 
-    current_best_acc = calc_sign_accuracy_workday(
+    current_best_acc = calc_sign_f1_workday(
         best_preds[range_mask],
         true_arr[range_mask],
         is_holiday_in_range
@@ -312,7 +355,7 @@ def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, s
             candidate_preds = best_preds.copy()
             candidate_preds[hour_mask] = preds[hour_mask, quant_idx]
 
-            acc = calc_sign_accuracy_workday(
+            acc = calc_sign_f1_workday(
                 candidate_preds[range_mask],
                 true_arr[range_mask],
                 is_holiday_in_range
@@ -325,12 +368,12 @@ def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, s
 
         selected_quants[hour] = best_hour_quant
         best_preds[hour_mask] = preds[hour_mask, best_hour_quant]
-    final_acc = calc_sign_accuracy_workday(
+    final_acc = calc_sign_f1_workday(
         best_preds[range_mask],
         true_arr[range_mask],
         is_holiday_in_range
     )
     print(f"Greedy quantile indices by hour: {selected_quants.tolist()}")
-    print(f"Best workday sign accuracy in range: {final_acc:.4f}")
+    print(f"Best workday sign F1-score in range: {final_acc:.4f}")
 
     return best_preds

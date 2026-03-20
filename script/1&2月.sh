@@ -170,37 +170,37 @@ run_accuracy() {
 # rm -rf "$REPORT_FILE"
 
 # 环比1个月+历史1个月2月
-export quant_start_day1=2025-02-01
-export quant_end_day1=2025-02-28
-export quant_start_day2=2026-01-01
-export quant_end_day2=2026-01-31
-"$PY_BIN" -u main.py --model_type=HolidayAvg --seq_len=720 --report --eval_day=450
-"$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-"$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-"$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-"$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史1个月5模型"
-"$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
-"$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
-"$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1 " --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2 " --report --eval_day=450
-"$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450  
-run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史1个月9模型"
-rm -rf "$REPORT_FILE"
+# export quant_start_day1=2025-02-01
+# export quant_end_day1=2025-02-28
+# export quant_start_day2=2026-01-01
+# export quant_end_day2=2026-01-31
+# "$PY_BIN" -u main.py --model_type=HolidayAvg --seq_len=720 --report --eval_day=450
+# "$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# "$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# "$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# "$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史1个月5模型"
+# "$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
+# "$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
+# "$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1 " --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2 " --report --eval_day=450
+# "$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450  
+# run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史1个月9模型"
+# rm -rf "$REPORT_FILE"
 
 # 环比1个月+历史3个月2月
-export quant_start_day1=2025-02-01
-export quant_end_day1=2025-02-28
-export quant_start_day2=2025-11-01
-export quant_end_day2=2026-01-31
-"$PY_BIN" -u main.py --model_type=HolidayAvg --seq_len=720 --report --eval_day=450
-"$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-"$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-"$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-"$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
-run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史3个月5模型"
-"$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
-"$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
-"$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
-"$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450  
-run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史3个月9模型"
-rm -rf "$REPORT_FILE"
+# export quant_start_day1=2025-02-01
+# export quant_end_day1=2025-02-28
+# export quant_start_day2=2025-11-01
+# export quant_end_day2=2026-01-31
+# "$PY_BIN" -u main.py --model_type=HolidayAvg --seq_len=720 --report --eval_day=450
+# "$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# "$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# "$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# "$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --find_quant --eval_day=450
+# run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史3个月5模型"
+# "$CONDA_BIN" run -n moirai --no-capture-output python -u main.py --model_type=moirai2time2 --seq_len=720 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
+# "$PY_BIN" -u main.py --model_type=YingLongtime --seq_len=768 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
+# "$PY_BIN" -u main.py --model_type=Chronos-2time2 --seq_len=2880 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450
+# "$PY_BIN" -u main.py --model_type=TimesFM-2.5time --seq_len=1080 --quant_start_day1="$quant_start_day1" --quant_end_day1="$quant_end_day1" --quant_start_day2="$quant_start_day2" --quant_end_day2="$quant_end_day2" --report --eval_day=450  
+# run_accuracy 2026-02-01 2026-02-28 "环比1个月+历史3个月9模型"
+# rm -rf "$REPORT_FILE"
