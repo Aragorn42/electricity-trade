@@ -157,7 +157,7 @@ def forecast(model, df, args):
         y_preds = y_preds[:, -24:, :] 
         
         return y_preds.reshape(-1, y_preds.shape[-1]) # [timestramp, Num_Quantiles]
-    
+
 def calc_sign_accuracy_workday(preds, true_values, is_holiday):
     """
     计算符号准确率 (方向预测准确率)计算非节假日is_holiday=False的样本
@@ -190,6 +190,37 @@ def calc_sign_accuracy_workday(preds, true_values, is_holiday):
     correct_count = np.sum(sign_p == sign_t)
     accuracy = correct_count / len(p_non_holiday)
     return accuracy
+
+def calc_workday_mae(preds, true_values, is_holiday):
+    """
+    计算工作日样本的 MAE（is_holiday=False 的样本）
+    preds: numpy array, 预测值
+    true_values: numpy array, 真实值
+    is_holiday: list of bool, 表示每个时间点是否为节假日 (False=工作日, True=节假日)
+    """
+    # 确保所有输入为一维数组（避免二维输入导致的维度问题）
+    p = preds.flatten()
+    t = true_values.flatten()
+    is_holiday_arr = np.array(is_holiday).flatten()
+
+    # 确保三个数组长度一致（取最小长度）
+    min_len = min(len(p), len(t), len(is_holiday_arr))
+    p = p[-min_len:]
+    t = t[-min_len:]
+    is_holiday_arr = is_holiday_arr[-min_len:]
+
+    # 创建工作日掩码（is_holiday=False 的位置为 True）
+    mask = ~is_holiday_arr
+
+    # 仅保留工作日样本
+    p_workday = p[mask]
+    t_workday = t[mask]
+
+    if len(p_workday) == 0:
+        return np.inf
+
+    mae = np.mean(np.abs(p_workday - t_workday))
+    return mae
 # def calc_sign_f1_workday(preds, true_values, is_holiday, average='macro'):
 #     """
 #     计算符号预测的 F1-score (仅计算非节假日样本)
@@ -334,7 +365,7 @@ def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, s
     best_preds = preds[:, init_q].copy()
     selected_quants = np.full(24, init_q, dtype=int)
 
-    current_best_acc = calc_sign_accuracy_workday(
+    current_best_mae = calc_workday_mae(
         best_preds[range_mask],
         true_arr[range_mask],
         is_holiday_in_range
@@ -355,25 +386,25 @@ def get_best_quants(timestramp, diff_preds, diff_true, start1=None, end1=None, s
             candidate_preds = best_preds.copy()
             candidate_preds[hour_mask] = preds[hour_mask, quant_idx]
 
-            acc = calc_sign_accuracy_workday(
+            mae = calc_workday_mae(
                 candidate_preds[range_mask],
                 true_arr[range_mask],
                 is_holiday_in_range
             )
 
-            if acc > current_best_acc:
-                current_best_acc = acc
+            if mae < current_best_mae:
+                current_best_mae = mae
                 best_hour_quant = quant_idx
                 improved = True
 
         selected_quants[hour] = best_hour_quant
         best_preds[hour_mask] = preds[hour_mask, best_hour_quant]
-    final_acc = calc_sign_accuracy_workday(
+    final_mae = calc_workday_mae(
         best_preds[range_mask],
         true_arr[range_mask],
         is_holiday_in_range
     )
     print(f"Greedy quantile indices by hour: {selected_quants.tolist()}")
-    print(f"Best workday sign F1-score in range: {final_acc:.4f}")
+    print(f"Best workday MAE in range: {final_mae:.4f}")
 
     return best_preds
