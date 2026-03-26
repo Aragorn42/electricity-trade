@@ -159,20 +159,70 @@ def forecast(model, df, args):
         y_preds_ordered = y_preds.flatten()
         return y_preds_ordered
     
+import numpy as np
+import pandas as pd
+
+
+def weekday_sign_accuracy(preds, trues, dates=None, weekday_mask=None):
+    """
+    工作日符号准确率：只在工作日样本上比较 sign(preds) == sign(trues)
+
+    Args:
+        preds: array-like
+        trues: array-like
+        dates: array-like 日期序列（可选）
+        weekday_mask: array-like bool 掩码（可选），True 表示保留该样本
+
+    Returns:
+        float: 准确率；若无有效样本返回 np.nan
+    """
+    preds = np.asarray(preds).reshape(-1)
+    trues = np.asarray(trues).reshape(-1)
+
+    if preds.shape[0] != trues.shape[0]:
+        raise ValueError("preds 和 trues 长度必须一致")
+
+    if weekday_mask is not None:
+        mask = np.asarray(weekday_mask).reshape(-1)
+        if mask.dtype != bool:
+            mask = mask.astype(bool)
+        if mask.shape[0] != preds.shape[0]:
+            raise ValueError("weekday_mask 长度必须与 preds/trues 一致")
+    elif dates is not None:
+        arr = np.asarray(dates).reshape(-1)
+        if arr.shape[0] != preds.shape[0]:
+            raise ValueError("dates 长度必须与 preds/trues 一致")
+
+        # 如果用户误传了布尔数组，直接按掩码处理，不再 to_datetime
+        if arr.dtype == bool:
+            mask = arr
+        else:
+            dt = pd.to_datetime(arr, errors="coerce")
+            mask = (dt.weekday < 5) & (~pd.isna(dt))
+    else:
+        raise ValueError("dates 和 weekday_mask 至少提供一个")
+
+    if mask.sum() == 0:
+        return np.nan
+
+    pred_sign = np.sign(preds[mask])
+    true_sign = np.sign(trues[mask])
+    return float((pred_sign == true_sign).mean())
+
 def evaluate(args):
     # df with datatime and Price
     da_raw, rt_raw, diff_raw = handle_excel(args.file_path)
     da, da_scaler = scaled_data(da_raw)
     rt, rt_scaler = scaled_data(rt_raw)
     diff, diff_scaler = scaled_data(diff_raw)
-    if file.exists("output_report.xlsx"):
-        df_report = pd.read_excel("output_report.xlsx", header=None)
-    else:
-        df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
+    # if file.exists("output_report.xlsx"):
+    #     df_report = pd.read_excel("output_report.xlsx", header=None)
+    # else:
+    #     df_report = init_report_df(args, da_raw, rt_raw, diff_raw)
     device = torch.device('cuda')
     if args.need_train:
-        da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
-        rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
+        #da_preds = forecast(train(args, get_model(args).to(device), da), da, args)
+        #rt_preds = forecast(train(args, get_model(args).to(device), rt), rt, args)
         diff_preds = forecast(train(args, get_model(args).to(device), diff), diff, args)
     else:
         model = get_model(args)
@@ -186,22 +236,49 @@ def evaluate(args):
     diff_true = diff_raw.iloc[1:, 1].values
     # df_report, preds, trues, args
     # this function compares the sign of preds and trues and add 2 column after df_report
-    df_report = add_prediction_columns(df_report, diff_preds, diff_true, args, is_two_variate=False)
-    if args.two_variate:
-        df_report = add_prediction_columns(df_report, da_preds - rt_preds, diff_true, args, is_two_variate=True)
+    # df_report = add_prediction_columns(df_report, diff_preds, diff_true, args, is_two_variate=False)
+    # if args.two_variate:
+    #     df_report = add_prediction_columns(df_report, da_preds - rt_preds, diff_true, args, is_two_variate=True)
+    eval_start_day = pd.to_datetime(args.eval_start_day).date()
+    eval_end_day = pd.to_datetime(args.eval_end_day).date()
 
-    if args.report:
-        output_file = "output_report.xlsx"
-        # 使用 xlsxwriter 引擎
-        with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
-            df_report.to_excel(writer, index=False, header=False, sheet_name='Sheet1')
-            workbook  = writer.book
-            worksheet = writer.sheets['Sheet1']
-            format_float_3 = workbook.add_format({'num_format': '0.000'})
-            format_int = workbook.add_format({'num_format': '0'})
-            for col_idx, col_name in enumerate(df_report.columns):
-                first_cell_val = str(df_report.iloc[0, col_idx])
-                if "准确率" in first_cell_val:
-                    worksheet.set_column(col_idx, col_idx, 15, format_int)
-                else:
-                    worksheet.set_column(col_idx, col_idx, 15, format_float_3)
+    datetime_col = 'Datetime' if 'Datetime' in diff_raw.columns else 'Datatime'
+    if datetime_col not in diff_raw.columns:
+        raise ValueError("Neither 'Datetime' nor 'Datatime' column exists in diff_raw")
+
+    value_col = 'Price' if 'Price' in diff_raw.columns else diff_raw.columns[1]
+    raw_dates = pd.to_datetime(diff_raw[datetime_col])
+    eval_mask = (raw_dates.dt.date >= eval_start_day) & (raw_dates.dt.date <= eval_end_day)
+    eval_slice = diff_raw.loc[eval_mask, [datetime_col, value_col]].reset_index(drop=True)
+
+    diff_true_eval = eval_slice[value_col].to_numpy(dtype=np.float32)
+
+    if len(diff_preds) != len(diff_true_eval):
+        min_len = min(len(diff_preds), len(diff_true_eval))
+        print(f"Warning: pred/true length mismatch ({len(diff_preds)} vs {len(diff_true_eval)}), truncating to {min_len}")
+        diff_preds = diff_preds[:min_len]
+        eval_slice = eval_slice.iloc[:min_len].reset_index(drop=True)
+        diff_true_eval = diff_true_eval[:min_len]
+
+    save_df = pd.DataFrame({
+        datetime_col: eval_slice[datetime_col],
+        'diff_true': diff_true_eval,
+        'diff_pred': diff_preds,
+    })
+    print(weekday_sign_accuracy(diff_preds, diff_true_eval, eval_slice[datetime_col]))
+    save_df.to_csv(f"{args.model_type}_{args.eval_start_day}_diff_preds.csv", index=False)
+    # if args.report:
+    #     output_file = "output_report.xlsx"
+    #     # 使用 xlsxwriter 引擎
+    #     with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
+    #         df_report.to_excel(writer, index=False, header=False, sheet_name='Sheet1')
+    #         workbook  = writer.book
+    #         worksheet = writer.sheets['Sheet1']
+    #         format_float_3 = workbook.add_format({'num_format': '0.000'})
+    #         format_int = workbook.add_format({'num_format': '0'})
+    #         for col_idx, col_name in enumerate(df_report.columns):
+    #             first_cell_val = str(df_report.iloc[0, col_idx])
+    #             if "准确率" in first_cell_val:
+    #                 worksheet.set_column(col_idx, col_idx, 15, format_int)
+    #             else:
+    #                 worksheet.set_column(col_idx, col_idx, 15, format_float_3)

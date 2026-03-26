@@ -35,7 +35,7 @@ def train(args, model, data):
     train_loader = DataLoader(train_dataset, batch_size=args.batchsize, shuffle=False, num_workers=0)
     vali_loader = DataLoader(vali_dataset, batch_size=args.batchsize, shuffle=False, num_workers=0)
     test_loader = DataLoader(test_dataset, batch_size=args.batchsize, shuffle=False, num_workers=0)
-
+    print(f"train samples: {len(train_dataset)}, vali samples: {len(vali_dataset)}, test samples: {len(test_dataset)}")
     path = args.checkpoints_path + '/' + args.model_type 
     if not os.path.exists(path):
         os.makedirs(path)
@@ -51,6 +51,7 @@ def train(args, model, data):
         train_loss = []
         model.train()
         for i, (batch_x, batch_y, _, _) in enumerate(train_loader):
+            # print(batch_x.shape, batch_y.shape)
             iter_count += 1
             model_optim.zero_grad()
             batch_x = batch_x.float().unsqueeze(2).to(device)

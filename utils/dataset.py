@@ -9,34 +9,54 @@ class PriceDataset(Dataset):
         self.seq_len = args.seq_len
         self.pred_len = args.pred_len
         self.stride = stride
-        self.train_day_start = 730 - args.train_day - args.val_day - args.eval_day
         pd_dates = pd.to_datetime(dates) 
+
+        # 日期参数格式：YYYY-MM-DD，按天定位并映射到小时级索引切片
+        train_start_day = pd.to_datetime(args.train_start_day).date()
+        train_end_day = pd.to_datetime(args.train_end_day).date()
+        val_start_day = pd.to_datetime(args.val_start_day).date()
+        val_end_day = pd.to_datetime(args.val_end_day).date()
+        eval_start_day = pd.to_datetime(args.eval_start_day).date()
+        eval_end_day = pd.to_datetime(args.eval_end_day).date()
+
+        date_only = pd_dates.date
+
+        def get_range_idx(start_day, end_day, split_name):
+            idx = np.where((date_only >= start_day) & (date_only <= end_day))[0]
+            if len(idx) == 0:
+                raise ValueError(
+                    f"{split_name} date range [{start_day}, {end_day}] has no overlap with provided dates"
+                )
+            return idx[0], idx[-1] + 1
+
+        def get_context_range_idx(start_day, end_day, split_name):
+            split_start, split_end = get_range_idx(start_day, end_day, split_name)
+            # 前置上下文增加 seq_len + pred_len - 24，使首个样本预测窗口最后24点对齐 split 起始日
+            pre_context = self.seq_len + self.pred_len - 24
+            context_start = max(0, split_start - pre_context)
+            return context_start, split_end
 
         # is_holiday() 对周末和法定节假日返回 True，对调休上班日返回 False
         holiday_mask = [1 if is_holiday(d) else 0 for d in pd_dates]
 
         self.holiday_data = np.array(holiday_mask, dtype=np.float32)
-        total_len = len(data)
         if mode == 'train':
-            # 训练集：取前 train_day 天的数据
-            start_idx = self.train_day_start * 24
-            end_idx = start_idx + args.train_day * 24
+            # 训练集：按日期切片，并在前面补 seq_len + pred_len - 24 长度上下文
+            start_idx, end_idx = get_context_range_idx(train_start_day, train_end_day, 'train')
             self.data_reset = data[start_idx:end_idx]
             self.holiday_reset = self.holiday_data[start_idx:end_idx]
             
         elif mode == 'val':
-            # 验证集：介于 train 和 test 之间的数据
-            start_idx = self.train_day_start * 24 + args.train_day * 24
-            end_idx = total_len - args.eval_day * 24 - self.seq_len - self.pred_len + 24
+            # 验证集：按日期切片，并在前面补 seq_len + pred_len - 24 长度上下文
+            start_idx, end_idx = get_context_range_idx(val_start_day, val_end_day, 'val')
             self.data_reset = data[start_idx:end_idx]
             self.holiday_reset = self.holiday_data[start_idx:end_idx]
             
         else:
-            # 测试集：取最后 eval_day 天的数据
-            start_idx = total_len - args.eval_day * 24 - self.seq_len - self.pred_len + 24
-            end_idx = data.shape[0]
-            self.data_reset = data[start_idx:]
-            self.holiday_reset = self.holiday_data[start_idx:]
+            # 测试集：按日期切片，并在前面补 seq_len + pred_len - 24 长度上下文
+            start_idx, end_idx = get_context_range_idx(eval_start_day, eval_end_day, 'eval')
+            self.data_reset = data[start_idx:end_idx]
+            self.holiday_reset = self.holiday_data[start_idx:end_idx]
         print(f"{mode} day:{(end_idx-start_idx)/24}")
         
     def __len__(self):

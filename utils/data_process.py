@@ -114,7 +114,8 @@ def handle_excel(file_path):
             nums = re.findall(r'\d+', txt)
             if nums:
                 return int(nums[0])
-            return 0 # 兜底，如果没有数字则默认为0点
+            return np.nan
+
 
         # 应用解析函数
         melted_df['Hour_Offset'] = melted_df['Hour_Raw'].apply(parse_hour)
