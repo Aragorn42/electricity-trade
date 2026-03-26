@@ -219,6 +219,21 @@ def calc_workday_mae(preds, true_values, is_holiday):
     if len(p_workday) == 0:
         return np.inf
 
+    # MSE
+    mse = np.mean((p_workday - t_workday) ** 2)
+
+    # MAPE
+    eps = 1e-8
+    mape = np.mean(np.abs((p_workday - t_workday) / (t_workday + eps))) * 100.0
+
+    # Huber_loss
+    delta = 1.0
+    err = p_workday - t_workday
+    is_small = np.abs(err) <= delta
+    huber_elem = np.where(is_small, 0.5 * err ** 2, delta * (np.abs(err) - 0.5 * delta))
+    huber_loss = np.mean(huber_elem)
+
+    # MAE
     mae = np.mean(np.abs(p_workday - t_workday))
     return mae
 # def calc_sign_f1_workday(preds, true_values, is_holiday, average='macro'):
